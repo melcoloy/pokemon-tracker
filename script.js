@@ -548,6 +548,16 @@ locationFilter.addEventListener('change', () => {
     applyFilters();
 });
 
+// === Récupère la meilleure image disponible pour un Pokémon (artwork officiel HD, sinon sprite classique) ===
+function getArtworkUrl(poke) {
+    if (!poke.sprites) return '';
+    if (poke.sprites.official_artwork) return poke.sprites.official_artwork;
+    if (poke.sprites.other && poke.sprites.other['official-artwork'] && poke.sprites.other['official-artwork'].front_default) {
+        return poke.sprites.other['official-artwork'].front_default;
+    }
+    return poke.sprites.front_default || '';
+}
+
 // === Affichage des Pokémon ===
 function displayPokemon(pokemonList) {
     if (pokemonList.length === 0) {
@@ -560,7 +570,7 @@ function displayPokemon(pokemonList) {
 
         return `
             <div class="pokemon-card" onclick="selectPokemonInStats(${poke.id})">
-                <img src="${poke.sprites.front_default}" alt="${poke.frenchName}">
+                <img src="${getArtworkUrl(poke)}" alt="${poke.frenchName}">
                 <h3>${poke.frenchName}</h3>
                 <p><span class="national-num">(${nationalLabel})</span></p>
                 <p class="types">${poke.frenchTypes.join(', ')}</p>
@@ -708,7 +718,7 @@ function generateTeam() {
 function displayGeneratedTeam(team) {
     generatedTeamDisplay.innerHTML = team.map(poke => `
         <div class="pokemon-card">
-            <img src="${poke.sprites.front_default}" alt="${poke.frenchName}">
+            <img src="${getArtworkUrl(poke)}" alt="${poke.frenchName}">
             <h3>${poke.frenchName}</h3>
             <p>#${poke.id.toString().padStart(3, '0')}</p>
             <p class="types">${poke.frenchTypes.join(', ')}</p>
@@ -724,7 +734,7 @@ function addGeneratedTeamToMyTeam() {
     userTeam = currentGeneratedTeam.map(poke => ({
         id: poke.id,
         name: poke.frenchName,
-        image: poke.sprites.front_default,
+        image: getArtworkUrl(poke),
         types: poke.frenchTypes
     }));
 
@@ -925,18 +935,18 @@ function renderEvolutionRows(edges, container, emptyMessage, showButton) {
 
         const toTypesJs = `[${toPoke.frenchTypes.map(t => `'${t}'`).join(',')}]`;
         const buttonHtml = showButton
-            ? `<button class="evolution-confirm-btn" onclick="markEvolved(${fromPoke.id}, ${toPoke.id}, '${toPoke.frenchName}', '${toPoke.sprites.front_default}', ${toTypesJs})">✅ Marquer comme évolué</button>`
+            ? `<button class="evolution-confirm-btn" onclick="markEvolved(${fromPoke.id}, ${toPoke.id}, '${toPoke.frenchName}', '${getArtworkUrl(toPoke)}', ${toTypesJs})">✅ Marquer comme évolué</button>`
             : '';
 
         return `
             <div class="evolution-card">
                 <div class="evolution-mon">
-                    <img src="${fromPoke.sprites.front_default}" alt="${fromPoke.frenchName}">
+                    <img src="${getArtworkUrl(fromPoke)}" alt="${fromPoke.frenchName}">
                     <span>${fromPoke.frenchName}</span>
                 </div>
                 <div class="evolution-arrow">➜</div>
                 <div class="evolution-mon">
-                    <img src="${toPoke.sprites.front_default}" alt="${toPoke.frenchName}">
+                    <img src="${getArtworkUrl(toPoke)}" alt="${toPoke.frenchName}">
                     <span>${toPoke.frenchName}</span>
                 </div>
                 <div class="evolution-info">
@@ -1132,7 +1142,7 @@ statsAddTeamBtn.addEventListener('click', () => {
     if (!statsSelectedPoke1) return;
     const poke = allPokemon.find(p => p.id === statsSelectedPoke1);
     if (!poke) return;
-    addToTeam(poke.id, poke.frenchName, poke.sprites.front_default, poke.frenchTypes);
+    addToTeam(poke.id, poke.frenchName, getArtworkUrl(poke), poke.frenchTypes);
 });
 
 function updateStatsChart() {

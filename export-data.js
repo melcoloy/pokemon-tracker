@@ -214,7 +214,12 @@ async function exportGame(versionSlug) {
             types: pokeData.types.map(t => ({ type: { name: t.type.name } })),
             frenchTypes,
             stats: pokeData.stats,
-            sprites: { front_default: pokeData.sprites.front_default },
+            sprites: {
+                front_default: pokeData.sprites.front_default,
+                official_artwork: (pokeData.sprites.other && pokeData.sprites.other['official-artwork'])
+                    ? pokeData.sprites.other['official-artwork'].front_default
+                    : null
+            },
             isFinal,
             isLegendary,
             abilities,
