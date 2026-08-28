@@ -674,3 +674,197 @@ header h1 {
     white-space: nowrap;
     margin-left: 10px;
 }
+
+/* ==================== MODE SOMBRE ==================== */
+
+body.dark-mode .container {
+    background: #1e1e2e;
+}
+
+body.dark-mode .game-select-wrapper {
+    background: #2a2a3d;
+    border-bottom-color: #444;
+}
+
+body.dark-mode .game-select-wrapper label {
+    color: #eee;
+}
+
+body.dark-mode .tabs {
+    background: #24243a;
+    border-bottom-color: #444;
+}
+
+body.dark-mode .tab-btn {
+    background: #33334d;
+    color: #eee;
+}
+
+body.dark-mode .tab-btn:hover {
+    background: #3d3d5c;
+}
+
+body.dark-mode .tab-content h2 {
+    color: #eee;
+}
+
+body.dark-mode .search-input,
+body.dark-mode .type-select {
+    background: #2a2a3d;
+    border-color: #444;
+    color: #eee;
+}
+
+body.dark-mode .pokemon-card {
+    background: #2a2a3d;
+    border-color: #444;
+}
+
+body.dark-mode .pokemon-card h3 {
+    color: #eee;
+}
+
+body.dark-mode .pokemon-card p {
+    color: #aaa;
+}
+
+body.dark-mode .national-num {
+    color: #888;
+}
+
+body.dark-mode .team-slot {
+    background: #2a2a3d;
+    border-color: #555;
+}
+
+body.dark-mode .team-slot.filled {
+    background: #2a2a3d;
+    border-color: #667eea;
+}
+
+body.dark-mode .team-slot p.types {
+    color: #aaa;
+}
+
+body.dark-mode .calc-intro {
+    color: #aaa;
+}
+
+body.dark-mode .calc-field label {
+    color: #eee;
+}
+
+body.dark-mode .stats-types-line {
+    color: #aaa;
+}
+
+body.dark-mode .calc-result.effect-none {
+    background: #33334a;
+    color: #ccc;
+}
+
+body.dark-mode .calc-result.effect-not-very {
+    background: #4a1f1f;
+    color: #ff9c9c;
+}
+
+body.dark-mode .calc-result.effect-normal {
+    background: #2a2a4a;
+    color: #ddd;
+}
+
+body.dark-mode .calc-result.effect-super {
+    background: #1f4a2f;
+    color: #9cffb8;
+}
+
+body.dark-mode .evolutions-note {
+    background: #3a3320;
+    border-color: #6b5a2a;
+    color: #e0c060;
+}
+
+body.dark-mode #evolutions h3,
+body.dark-mode .moves-section h3 {
+    color: #eee;
+}
+
+body.dark-mode .evolution-card {
+    background: #2a2a3d;
+    border-color: #444;
+}
+
+body.dark-mode .evolution-mon span {
+    color: #eee;
+}
+
+body.dark-mode .evolution-method {
+    color: #aaa;
+}
+
+body.dark-mode .evolutions-empty {
+    color: #aaa;
+}
+
+body.dark-mode .stats-data-table th {
+    background: #2a2a3d;
+    color: #eee;
+}
+
+body.dark-mode .stats-data-table td {
+    color: #eee;
+}
+
+body.dark-mode .stats-data-table th,
+body.dark-mode .stats-data-table td {
+    border-bottom-color: #444;
+}
+
+body.dark-mode .autocomplete-results {
+    background: #2a2a3d;
+    border-color: #444;
+}
+
+body.dark-mode .autocomplete-item {
+    color: #eee;
+}
+
+body.dark-mode .autocomplete-item:hover {
+    background: #33334d;
+}
+
+body.dark-mode .autocomplete-item.no-result {
+    color: #888;
+}
+
+body.dark-mode .autocomplete-item.no-result:hover {
+    background: #2a2a3d;
+}
+
+body.dark-mode .moves-column h4 {
+    color: #eee;
+}
+
+body.dark-mode .moves-list li {
+    background: #2a2a3d;
+    color: #eee;
+}
+
+body.dark-mode .moves-list li.moves-empty {
+    color: #888;
+}
+
+body.dark-mode .site-footer {
+    background: #24243a;
+    border-top-color: #444;
+}
+
+body.dark-mode .export-btn {
+    background: #2a2a3d;
+    color: #a8b4ff;
+}
+
+body.dark-mode .export-btn:hover {
+    background: #667eea;
+    color: white;
+}

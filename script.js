@@ -35,6 +35,7 @@ const gameSelect = document.getElementById('game-select');
 const gameLoadingIndicator = document.getElementById('game-loading-indicator');
 const exportGameBtn = document.getElementById('export-game-btn');
 const exportTypesBtn = document.getElementById('export-types-btn');
+const themeToggleBtn = document.getElementById('theme-toggle-btn');
 
 // État de l'app
 let allPokemon = [];
@@ -65,6 +66,19 @@ const regionFormLabelsFr = {
     hisui: 'Hisui',
     paldea: 'Paldea'
 };
+
+// === Mode sombre : bascule et sauvegarde de la préférence ===
+function applyTheme(isDark) {
+    document.body.classList.toggle('dark-mode', isDark);
+    themeToggleBtn.textContent = isDark ? '☀️ Mode clair' : '🌙 Mode sombre';
+    localStorage.setItem('darkMode', isDark ? '1' : '0');
+}
+
+themeToggleBtn.addEventListener('click', () => {
+    applyTheme(!document.body.classList.contains('dark-mode'));
+});
+
+applyTheme(localStorage.getItem('darkMode') === '1');
 
 // === Navigation par onglets ===
 function switchToTab(tabName) {
