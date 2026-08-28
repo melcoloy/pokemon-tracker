@@ -34,6 +34,9 @@ const movesSectionDisplay = document.getElementById('moves-section');
 const gameSelect = document.getElementById('game-select');
 const gameLoadingIndicator = document.getElementById('game-loading-indicator');
 const gameCoverImg = document.getElementById('game-cover-img');
+const megaListDisplay = document.getElementById('mega-list');
+const specialFormsListDisplay = document.getElementById('special-forms-list');
+const versionExclusivesDisplay = document.getElementById('version-exclusives');
 const exportGameBtn = document.getElementById('export-game-btn');
 const exportTypesBtn = document.getElementById('export-types-btn');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
@@ -53,12 +56,26 @@ let parentMap = {}; // nom d'espèce enfant -> nom d'espèce parent (pour le jeu
 let statsChartInstance = null;
 let statsSelectedPoke1 = null;
 let statsSelectedPoke2 = null;
-const gameCache = {}; // cache par jeu : { pokemon, versionGroupName, regionName, evolutionMap }
+const gameCache = {}; // cache par jeu : { pokemon, versionGroupName, regionName, evolutionMap, versionNames }
 let currentVersionGroupName = null; // version_group du jeu actif (pour filtrer les capacités)
 let currentRegionName = null; // région associée au jeu actif (pour le filtre par zone et les formes régionales)
+let currentGameVersions = []; // noms des versions individuelles du jeu actif (ex: ['red','blue'])
 const locationsCache = {}; // cache des listes de zones (avec Pokémon) par "région::version"
 const locationPokemonCache = {}; // cache des Pokémon par zone (clé: "location::version")
 let currentLocationSpeciesNames = null; // Set des noms de Pokémon (forme incluse) disponibles dans la zone sélectionnée (null = pas de filtre)
+const specificitiesCache = {}; // cache par jeu : { megas, specialForms, exclusives }
+const encounterVersionsCache = {}; // cache des versions de rencontre par nom de pokémon (clé: nom du pokémon)
+
+// Jeux ayant la mécanique de méga-évolution (génération 6-7 seulement)
+const GAMES_WITH_MEGA = new Set(['x', 'omega-ruby', 'sun', 'ultra-sun']);
+
+// Petite liste connue de formes spéciales liées à un jeu précis (non exhaustive)
+const SPECIAL_FORMS_DB = [
+    { speciesName: 'necrozma', formLabel: 'Formes de fusion (Crin du Crépuscule / Ailes de l\'Aube)', games: ['ultra-sun'] },
+    { speciesName: 'zygarde', formLabel: 'Forme 10% / Complète (via Cube Zygarde)', games: ['sun', 'ultra-sun'] },
+    { speciesName: 'kyurem', formLabel: 'Kyurem Blanc / Noir (fusion)', games: ['black-2'] },
+    { speciesName: 'giratina', formLabel: 'Forme Originelle', games: ['platinum'] }
+];
 
 // Libellés français pour les formes régionales
 const regionFormLabelsFr = {
@@ -89,7 +106,9 @@ function switchToTab(tabName) {
 
 tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-        switchToTab(btn.getAttribute('data-tab'));
+        const tabName = btn.getAttribute('data-tab');
+        switchToTab(tabName);
+        if (tabName === 'specificities') loadSpecificities();
     });
 });
 
@@ -187,8 +206,9 @@ async function getGameSpeciesInfo(versionSlug) {
     }
 
     const regionName = vgData.regions.length > 0 ? vgData.regions[0].name : null;
+    const versionNames = vgData.versions.map(v => v.name);
 
-    return { speciesNames: [...speciesSet], versionGroupName: vgData.name, regionName, orderMap };
+    return { speciesNames: [...speciesSet], versionGroupName: vgData.name, regionName, orderMap, versionNames };
 }
 
 // === Choisit la bonne variété d'une espèce pour la région active (forme régionale si elle existe) ===
@@ -264,6 +284,7 @@ async function loadGame(versionSlug) {
         allPokemon = cached.pokemon;
         currentVersionGroupName = cached.versionGroupName;
         currentRegionName = cached.regionName;
+        currentGameVersions = cached.versionNames || [];
         evolutionMap = cached.evolutionMap;
         buildNameToPoke();
         buildParentMap();
@@ -283,6 +304,7 @@ async function loadGame(versionSlug) {
         allPokemon = fileData.pokemon;
         currentVersionGroupName = fileData.versionGroupName;
         currentRegionName = fileData.regionName;
+        currentGameVersions = fileData.versionNames || [];
         evolutionMap = fileData.evolutionMap;
         buildNameToPoke();
         buildParentMap();
@@ -290,6 +312,7 @@ async function loadGame(versionSlug) {
             pokemon: allPokemon,
             versionGroupName: currentVersionGroupName,
             regionName: currentRegionName,
+            versionNames: currentGameVersions,
             evolutionMap
         };
         gameSelect.disabled = false;
@@ -302,7 +325,7 @@ async function loadGame(versionSlug) {
     gameLoadingIndicator.textContent = 'Chargement du jeu depuis l\'API...';
 
     try {
-        const { speciesNames, versionGroupName, regionName, orderMap } = await getGameSpeciesInfo(versionSlug);
+        const { speciesNames, versionGroupName, regionName, orderMap, versionNames } = await getGameSpeciesInfo(versionSlug);
 
         const results = await Promise.all(
             speciesNames.map(async (name) => {
@@ -332,6 +355,8 @@ async function loadGame(versionSlug) {
                         isHidden: a.is_hidden
                     }));
 
+                    const varieties = speciesData.varieties.map(v => v.pokemon.name);
+
                     return {
                         ...pokeData,
                         id: speciesData.id,
@@ -340,7 +365,8 @@ async function loadGame(versionSlug) {
                         frenchTypes,
                         isFinal,
                         isLegendary,
-                        abilities
+                        abilities,
+                        varieties
                     };
                 } catch (e) {
                     console.warn(`Impossible de charger ${name}`, e);
@@ -358,6 +384,7 @@ async function loadGame(versionSlug) {
 
         currentVersionGroupName = versionGroupName;
         currentRegionName = regionName;
+        currentGameVersions = versionNames;
 
         buildEvolutionMapFromChains();
         buildNameToPoke();
@@ -367,6 +394,7 @@ async function loadGame(versionSlug) {
             pokemon: allPokemon,
             versionGroupName,
             regionName,
+            versionNames,
             evolutionMap
         };
     } catch (error) {
@@ -414,6 +442,13 @@ function afterGameLoaded() {
     movesSectionDisplay.innerHTML = '';
     statsAddTeamBtn.style.display = 'none';
     statsTypesDisplay.textContent = '';
+
+    megaListDisplay.innerHTML = '<p>Ouvre cet onglet pour charger les spécificités de ce jeu.</p>';
+    specialFormsListDisplay.innerHTML = '';
+    versionExclusivesDisplay.innerHTML = '';
+    if (document.getElementById('specificities').classList.contains('active')) {
+        loadSpecificities();
+    }
 
     exportGameBtn.style.display = allPokemon.length > 0 ? 'inline-block' : 'none';
 }
@@ -1378,10 +1413,152 @@ async function renderMovesSection(poke) {
     `;
 }
 
+// === Spécificités : limite le nombre de requêtes en vol simultanément (navigateur) ===
+async function mapWithConcurrencyBrowser(items, limit, fn) {
+    const results = new Array(items.length);
+    let index = 0;
+    async function worker() {
+        while (index < items.length) {
+            const current = index++;
+            try {
+                results[current] = await fn(items[current], current);
+            } catch (e) {
+                results[current] = null;
+            }
+        }
+    }
+    const workers = Array.from({ length: Math.min(limit, items.length) }, worker);
+    await Promise.all(workers);
+    return results;
+}
+
+// === Spécificités : récupère l'ensemble des versions où un Pokémon est rencontrable à l'état sauvage (avec cache) ===
+async function getEncounterVersions(pokeName) {
+    if (encounterVersionsCache[pokeName]) return encounterVersionsCache[pokeName];
+
+    try {
+        const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokeName}/encounters`);
+        const data = await res.json();
+        const versions = new Set();
+        data.forEach(loc => {
+            loc.version_details.forEach(vd => versions.add(vd.version.name));
+        });
+        encounterVersionsCache[pokeName] = versions;
+        return versions;
+    } catch (e) {
+        encounterVersionsCache[pokeName] = new Set();
+        return encounterVersionsCache[pokeName];
+    }
+}
+
+// === Spécificités : charge et affiche méga-évolutions, formes spéciales et exclusivités pour le jeu actif ===
+async function loadSpecificities() {
+    const slug = gameSelect.value;
+
+    if (specificitiesCache[slug]) {
+        renderSpecificities(specificitiesCache[slug]);
+        return;
+    }
+
+    if (allPokemon.length === 0) {
+        megaListDisplay.innerHTML = '<p>Le Pokédex n\'est pas encore chargé, réessaie dans un instant.</p>';
+        return;
+    }
+
+    // 1. Méga-évolutions
+    const hasMega = GAMES_WITH_MEGA.has(slug);
+    const megas = hasMega
+        ? allPokemon.filter(p => p.varieties && p.varieties.some(v => /-mega(-x|-y)?$/.test(v)))
+        : [];
+
+    // 2. Formes spéciales (liste connue)
+    const specialForms = SPECIAL_FORMS_DB
+        .filter(entry => entry.games.includes(slug))
+        .map(entry => ({ poke: nameToPoke[entry.speciesName], label: entry.formLabel }))
+        .filter(entry => entry.poke);
+
+    // 3. Exclusivités de version (seulement si le jeu a exactement 2 versions jumelles)
+    let exclusives = null;
+    if (currentGameVersions.length === 2) {
+        const [versionA, versionB] = currentGameVersions;
+        megaListDisplay.innerHTML = megas.length ? '' : '<p class="evolutions-empty">Pas de méga-évolution dans ce jeu.</p>';
+        versionExclusivesDisplay.innerHTML = '<p class="calc-intro">Analyse des rencontres en cours (peut prendre un moment sur un grand Pokédex)...</p>';
+
+        const results = await mapWithConcurrencyBrowser(allPokemon, 8, async (poke) => {
+            const versions = await getEncounterVersions(poke.name);
+            const inA = versions.has(versionA);
+            const inB = versions.has(versionB);
+            if (inA && !inB) return { poke, side: 'A' };
+            if (inB && !inA) return { poke, side: 'B' };
+            return null;
+        });
+
+        exclusives = {
+            versionA,
+            versionB,
+            listA: results.filter(r => r && r.side === 'A').map(r => r.poke),
+            listB: results.filter(r => r && r.side === 'B').map(r => r.poke)
+        };
+    }
+
+    specificitiesCache[slug] = { megas, specialForms, exclusives };
+    renderSpecificities(specificitiesCache[slug]);
+}
+
+// === Spécificités : construit une carte simple (image + nom) ===
+function specificityCardHtml(poke, subLabel) {
+    return `
+        <div class="pokemon-card">
+            <img src="${getArtworkUrl(poke)}" alt="${poke.frenchName}">
+            <h3>${poke.frenchName}</h3>
+            ${subLabel ? `<p class="types">${subLabel}</p>` : ''}
+        </div>
+    `;
+}
+
+// === Spécificités : affiche les 3 sections ===
+function renderSpecificities(data) {
+    const { megas, specialForms, exclusives } = data;
+
+    megaListDisplay.innerHTML = megas.length
+        ? megas.map(p => specificityCardHtml(p)).join('')
+        : '<p class="evolutions-empty">Pas de méga-évolution dans ce jeu.</p>';
+
+    specialFormsListDisplay.innerHTML = specialForms.length
+        ? specialForms.map(entry => specificityCardHtml(entry.poke, entry.label)).join('')
+        : '<p class="evolutions-empty">Aucune forme spéciale connue pour ce jeu (dans notre petite liste).</p>';
+
+    if (!exclusives) {
+        versionExclusivesDisplay.innerHTML = '<p class="evolutions-empty">Ce jeu n\'a pas de version jumelle : pas d\'exclusivités applicables.</p>';
+        return;
+    }
+
+    const labelA = formatLocationName(exclusives.versionA);
+    const labelB = formatLocationName(exclusives.versionB);
+
+    const listAHtml = exclusives.listA.length
+        ? exclusives.listA.map(p => `<li>${p.frenchName}</li>`).join('')
+        : '<li class="moves-empty">Aucun trouvé</li>';
+    const listBHtml = exclusives.listB.length
+        ? exclusives.listB.map(p => `<li>${p.frenchName}</li>`).join('')
+        : '<li class="moves-empty">Aucun trouvé</li>';
+
+    versionExclusivesDisplay.innerHTML = `
+        <div class="moves-column">
+            <h4>Exclusifs ${labelA}</h4>
+            <ul class="moves-list">${listAHtml}</ul>
+        </div>
+        <div class="moves-column">
+            <h4>Exclusifs ${labelB}</h4>
+            <ul class="moves-list">${listBHtml}</ul>
+        </div>
+    `;
+}
+
 // === Initialisation ===
 window.addEventListener('DOMContentLoaded', () => {
     updateGameCover(gameSelect.value);
     loadGame(gameSelect.value); // charge le jeu sélectionné par défaut (Rouge/Bleu)
     updateTeamDisplay();
     loadTypeChart();
-});
+}); 

@@ -75,6 +75,7 @@
             <button class="tab-btn" data-tab="calculatrice">Calculatrice</button>
             <button class="tab-btn" data-tab="generateur">Générateur</button>
             <button class="tab-btn" data-tab="evolutions">Évolutions</button>
+            <button class="tab-btn" data-tab="specificities">Spécificités</button>
             <button class="tab-btn" data-tab="stats">Statistiques et Capacités</button>
         </nav>
 
@@ -198,6 +199,21 @@
             <div id="stats-table"></div>
             <div id="abilities-section" class="moves-section"></div>
             <div id="moves-section" class="moves-section"></div>
+        </div>
+
+        <!-- Onglet Spécificités -->
+        <div id="specificities" class="tab-content">
+            <h2>Spécificités du jeu</h2>
+            <p class="evolutions-note">⚠️ Section approximative : les méga-évolutions sont détectées automatiquement, mais les exclusivités de version se basent uniquement sur les rencontres sauvages (les légendaires/événements obtenus autrement peuvent manquer), et les formes spéciales viennent d'une petite liste connue, pas d'une détection automatique complète.</p>
+
+            <h3>Méga-évolutions</h3>
+            <div id="mega-list" class="pokemon-list"><p>Sélectionne l'onglet pour charger.</p></div>
+
+            <h3>Formes spéciales</h3>
+            <div id="special-forms-list" class="pokemon-list"></div>
+
+            <h3>Exclusivités de version</h3>
+            <div id="version-exclusives" class="moves-columns"></div>
         </div>
 
         <footer class="site-footer">

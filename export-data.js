@@ -151,7 +151,8 @@ async function getGameSpeciesInfo(versionSlug) {
     }
 
     const regionName = vgData.regions.length > 0 ? vgData.regions[0].name : null;
-    return { speciesNames: [...speciesSet], versionGroupName: vgData.name, regionName, orderMap };
+    const versionNames = vgData.versions.map(v => v.name);
+    return { speciesNames: [...speciesSet], versionGroupName: vgData.name, regionName, orderMap, versionNames };
 }
 
 async function exportGame(versionSlug) {
@@ -162,7 +163,7 @@ async function exportGame(versionSlug) {
         return;
     }
 
-    const { speciesNames, versionGroupName, regionName, orderMap } = await getGameSpeciesInfo(versionSlug);
+    const { speciesNames, versionGroupName, regionName, orderMap, versionNames } = await getGameSpeciesInfo(versionSlug);
     console.log(`  ${speciesNames.length} espèces à charger...`);
 
     const usedChainUrls = new Set();
@@ -206,6 +207,8 @@ async function exportGame(versionSlug) {
             isHidden: a.is_hidden
         }));
 
+        const varieties = speciesData.varieties.map(v => v.pokemon.name);
+
         return {
             id: speciesData.id,
             speciesName: name,
@@ -223,6 +226,7 @@ async function exportGame(versionSlug) {
             isFinal,
             isLegendary,
             abilities,
+            varieties,
             moves: trimmedMoves
         };
     });
@@ -250,7 +254,7 @@ async function exportGame(versionSlug) {
         walk(chainData.chain);
     });
 
-    const exportObj = { versionSlug, versionGroupName, regionName, pokemon, evolutionMap };
+    const exportObj = { versionSlug, versionGroupName, regionName, versionNames, pokemon, evolutionMap };
     fs.writeFileSync(outPath, JSON.stringify(exportObj));
     const sizeMb = (fs.statSync(outPath).size / (1024 * 1024)).toFixed(1);
     console.log(`  ✅ ${pokemon.length} Pokémon exportés -> data/${versionSlug}.json (${sizeMb} Mo)`);
