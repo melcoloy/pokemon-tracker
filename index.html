@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokémon Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Pokémon Tracker</h1>
+        </header>
+
+        <div class="game-select-wrapper">
+            <label for="game-select">Jeu :</label>
+            <select id="game-select" class="type-select">
+                <optgroup label="Génération 1 (Kanto)">
+                    <option value="red">Rouge / Bleu</option>
+                    <option value="yellow">Jaune</option>
+                    <option value="firered">Rouge Feu / Vert Feuille</option>
+                    <option value="lets-go-pikachu">Let's Go Pikachu / Évoli</option>
+                </optgroup>
+                <optgroup label="Génération 2 (Johto)">
+                    <option value="gold">Or / Argent</option>
+                    <option value="crystal">Cristal</option>
+                    <option value="heartgold">HeartGold / SoulSilver</option>
+                </optgroup>
+                <optgroup label="Génération 3 (Hoenn)">
+                    <option value="ruby">Rubis / Saphir</option>
+                    <option value="emerald">Émeraude</option>
+                    <option value="omega-ruby">Rubis Oméga / Saphir Alpha</option>
+                </optgroup>
+                <optgroup label="Génération 4 (Sinnoh)">
+                    <option value="diamond">Diamant / Perle</option>
+                    <option value="platinum">Platine</option>
+                    <option value="brilliant-diamond">Diamant Étincelant / Perle Scintillante</option>
+                </optgroup>
+                <optgroup label="Génération 5 (Unova)">
+                    <option value="black">Noir / Blanc</option>
+                    <option value="black-2">Noir 2 / Blanc 2</option>
+                </optgroup>
+                <optgroup label="Génération 6 (Kalos)">
+                    <option value="x">X / Y</option>
+                </optgroup>
+                <optgroup label="Génération 7 (Alola)">
+                    <option value="sun">Soleil / Lune</option>
+                    <option value="ultra-sun">Ultra-Soleil / Ultra-Lune</option>
+                </optgroup>
+                <optgroup label="Génération 8 (Galar)">
+                    <option value="sword">Épée / Bouclier</option>
+                </optgroup>
+                <optgroup label="Spin-off">
+                    <option value="legends-arceus">Légendes Arceus</option>
+                </optgroup>
+                <optgroup label="Génération 9 (Paldea)">
+                    <option value="scarlet">Écarlate / Violet</option>
+                </optgroup>
+            </select>
+            <span id="game-loading-indicator" class="game-loading-indicator"></span>
+            <button id="export-game-btn" class="export-btn" style="display: none;">💾 Exporter les données de ce jeu</button>
+            <button id="export-types-btn" class="export-btn">💾 Exporter la table des types</button>
+        </div>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="pokedex">Pokédex</button>
+            <button class="tab-btn" data-tab="mon-equipe">Mon Équipe</button>
+            <button class="tab-btn" data-tab="calculatrice">Calculatrice</button>
+            <button class="tab-btn" data-tab="generateur">Générateur</button>
+            <button class="tab-btn" data-tab="evolutions">Évolutions</button>
+            <button class="tab-btn" data-tab="stats">Statistiques et Capacités</button>
+        </nav>
+
+        <!-- Onglet Pokédex -->
+        <div id="pokedex" class="tab-content active">
+            <h2>Pokédex</h2>
+            <div class="filters">
+                <input type="text" id="search" placeholder="Chercher un Pokémon..." class="search-input">
+                <select id="type-filter" class="type-select">
+                    <option value="">Tous les types</option>
+                </select>
+                <select id="location-filter" class="type-select">
+                    <option value="">Toutes les zones</option>
+                </select>
+                <span id="location-loading-indicator" class="game-loading-indicator"></span>
+            </div>
+            <p class="calc-intro">Clique sur un Pokémon pour voir ses statistiques et capacités.</p>
+            <div id="pokedex-list" class="pokemon-list">
+                <p>Chargement...</p>
+            </div>
+        </div>
+
+        <!-- Onglet Mon Équipe -->
+        <div id="mon-equipe" class="tab-content">
+            <h2>Mon Équipe</h2>
+            <div id="team-display" class="team-container">
+                <p>Aucun Pokémon ajouté</p>
+            </div>
+        </div>
+
+        <!-- Onglet Calculatrice -->
+        <div id="calculatrice" class="tab-content">
+            <h2>Calculatrice de Combat</h2>
+            <p class="calc-intro">Choisis le type de l'attaque et le(s) type(s) du Pokémon défenseur pour connaître l'efficacité.</p>
+            <div class="calc-form">
+                <div class="calc-field">
+                    <label for="atk-type-select">Type de l'attaque</label>
+                    <select id="atk-type-select" class="type-select">
+                        <option value="">-- Choisir --</option>
+                    </select>
+                </div>
+                <div class="calc-field">
+                    <label for="def-type1-select">Type défenseur 1</label>
+                    <select id="def-type1-select" class="type-select">
+                        <option value="">-- Choisir --</option>
+                    </select>
+                </div>
+                <div class="calc-field">
+                    <label for="def-type2-select">Type défenseur 2 (optionnel)</label>
+                    <select id="def-type2-select" class="type-select">
+                        <option value="">Aucun</option>
+                    </select>
+                </div>
+                <button id="calculate-btn" class="generate-btn">Calculer</button>
+            </div>
+            <div id="calc-result" class="calc-result"></div>
+        </div>
+
+        <!-- Onglet Générateur -->
+        <div id="generateur" class="tab-content">
+            <h2>Générateur d'Équipe</h2>
+            <div class="generator-controls">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="avoid-duplicate-types" checked>
+                    Éviter les doublons de type
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="final-stage-only">
+                    Uniquement des évolutions finales
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="exclude-legendary">
+                    Exclure les légendaires
+                </label>
+                <button id="generate-btn" class="generate-btn">🎲 Générer une équipe</button>
+            </div>
+            <div id="generated-team" class="pokemon-list">
+                <p>Clique sur "Générer une équipe" pour commencer !</p>
+            </div>
+            <button id="add-all-btn" class="add-all-btn" style="display: none;">Ajouter toute l'équipe à "Mon Équipe"</button>
+        </div>
+
+        <!-- Onglet Évolutions -->
+        <div id="evolutions" class="tab-content">
+            <h2>Tracker d'Évolutions</h2>
+            <p class="evolutions-note">⚠️ Les conditions affichées sont celles renseignées par l'API pour le jeu sélectionné quand disponible ; en cas de doute, elles correspondent aux conditions générales de la génération.</p>
+
+            <h3>Ton équipe</h3>
+            <p class="calc-intro">Pokémon de ton équipe qui peuvent encore évoluer, avec la méthode requise.</p>
+            <div id="evolutions-list" class="evolutions-list">
+                <p>Chargement...</p>
+            </div>
+
+            <h3>Rechercher un Pokémon</h3>
+            <p class="calc-intro">Consulte la chaîne d'évolution complète de n'importe quel Pokémon du jeu sélectionné.</p>
+            <input type="text" id="evolution-search" class="search-input" placeholder="Nom ou numéro du Pokémon...">
+            <div id="evolution-search-result" class="evolutions-list"></div>
+        </div>
+
+        <!-- Onglet Statistiques et Capacités -->
+        <div id="stats" class="tab-content">
+            <h2>Statistiques et Capacités</h2>
+            <p class="calc-intro">Compare les statistiques de base de deux Pokémon, et consulte les talents et capacités du premier.</p>
+            <div class="calc-form">
+                <div class="calc-field autocomplete-field">
+                    <label for="stats-poke1-input">Pokémon 1</label>
+                    <input type="text" id="stats-poke1-input" class="search-input" placeholder="Chercher un Pokémon...">
+                    <div id="stats-poke1-results" class="autocomplete-results"></div>
+                </div>
+                <div class="calc-field autocomplete-field">
+                    <label for="stats-poke2-input">Pokémon 2 (optionnel)</label>
+                    <input type="text" id="stats-poke2-input" class="search-input" placeholder="Chercher un Pokémon...">
+                    <div id="stats-poke2-results" class="autocomplete-results"></div>
+                </div>
+            </div>
+            <button id="stats-add-team-btn" class="generate-btn stats-add-btn" style="display: none;">Ajouter Pokémon 1 à "Mon Équipe"</button>
+            <div class="stats-chart-wrapper">
+                <canvas id="stats-radar-chart"></canvas>
+            </div>
+            <div id="stats-table"></div>
+            <div id="abilities-section" class="moves-section"></div>
+            <div id="moves-section" class="moves-section"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
