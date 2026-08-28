@@ -33,6 +33,7 @@ const abilitiesSectionDisplay = document.getElementById('abilities-section');
 const movesSectionDisplay = document.getElementById('moves-section');
 const gameSelect = document.getElementById('game-select');
 const gameLoadingIndicator = document.getElementById('game-loading-indicator');
+const gameCoverImg = document.getElementById('game-cover-img');
 const exportGameBtn = document.getElementById('export-game-btn');
 const exportTypesBtn = document.getElementById('export-types-btn');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
@@ -417,7 +418,25 @@ function afterGameLoaded() {
     exportGameBtn.style.display = allPokemon.length > 0 ? 'inline-block' : 'none';
 }
 
-gameSelect.addEventListener('change', () => loadGame(gameSelect.value));
+// === Affiche la jaquette du jeu sélectionné si elle existe dans covers/ (tente .png puis .jpg) ===
+function updateGameCover(versionSlug) {
+    gameCoverImg.onload = () => { gameCoverImg.style.display = 'inline-block'; };
+    gameCoverImg.onerror = () => {
+        if (gameCoverImg.dataset.triedJpg !== '1') {
+            gameCoverImg.dataset.triedJpg = '1';
+            gameCoverImg.src = `covers/${versionSlug}.jpg`;
+        } else {
+            gameCoverImg.style.display = 'none';
+        }
+    };
+    gameCoverImg.dataset.triedJpg = '0';
+    gameCoverImg.src = `covers/${versionSlug}.png`;
+}
+
+gameSelect.addEventListener('change', () => {
+    updateGameCover(gameSelect.value);
+    loadGame(gameSelect.value);
+});
 
 // === Export : télécharge les données du jeu actif en JSON (à placer dans un dossier data/) ===
 function exportGameData() {
@@ -1361,6 +1380,7 @@ async function renderMovesSection(poke) {
 
 // === Initialisation ===
 window.addEventListener('DOMContentLoaded', () => {
+    updateGameCover(gameSelect.value);
     loadGame(gameSelect.value); // charge le jeu sélectionné par défaut (Rouge/Bleu)
     updateTeamDisplay();
     loadTypeChart();
