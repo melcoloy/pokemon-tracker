@@ -28,6 +28,7 @@ const statsPoke2Results = document.getElementById('stats-poke2-results');
 const statsRadarCanvas = document.getElementById('stats-radar-chart');
 const statsTableDisplay = document.getElementById('stats-table');
 const statsAddTeamBtn = document.getElementById('stats-add-team-btn');
+const statsTypesDisplay = document.getElementById('stats-types-display');
 const abilitiesSectionDisplay = document.getElementById('abilities-section');
 const movesSectionDisplay = document.getElementById('moves-section');
 const gameSelect = document.getElementById('game-select');
@@ -397,6 +398,7 @@ function afterGameLoaded() {
     abilitiesSectionDisplay.innerHTML = '';
     movesSectionDisplay.innerHTML = '';
     statsAddTeamBtn.style.display = 'none';
+    statsTypesDisplay.textContent = '';
 
     exportGameBtn.style.display = allPokemon.length > 0 ? 'inline-block' : 'none';
 }
@@ -599,7 +601,7 @@ searchInput.addEventListener('input', applyFilters);
 typeFilter.addEventListener('change', applyFilters);
 
 // === Gestion de l'équipe ===
-function addToTeam(id, name, image) {
+function addToTeam(id, name, image, types) {
     if (userTeam.length >= 6) {
         alert('Équipe complète ! (6 Pokémon max)');
         return;
@@ -610,7 +612,7 @@ function addToTeam(id, name, image) {
         return;
     }
 
-    userTeam.push({ id, name, image });
+    userTeam.push({ id, name, image, types });
     saveTeam();
     updateTeamDisplay();
 }
@@ -634,6 +636,7 @@ function updateTeamDisplay() {
                 <img src="${poke.image}" alt="${poke.name}">
                 <h4>${poke.name}</h4>
                 <p>#${poke.id}</p>
+                <p class="types">${(poke.types && poke.types.length) ? poke.types.join(', ') : 'Type(s) inconnu(s)'}</p>
                 <button class="remove-btn" onclick="removeFromTeam(${poke.id})">Supprimer</button>
             </div>
         `).join('');
@@ -721,7 +724,8 @@ function addGeneratedTeamToMyTeam() {
     userTeam = currentGeneratedTeam.map(poke => ({
         id: poke.id,
         name: poke.frenchName,
-        image: poke.sprites.front_default
+        image: poke.sprites.front_default,
+        types: poke.frenchTypes
     }));
 
     saveTeam();
@@ -919,8 +923,9 @@ function renderEvolutionRows(edges, container, emptyMessage, showButton) {
         const toPoke = nameToPoke[edge.toName];
         if (!fromPoke || !toPoke) return '';
 
+        const toTypesJs = `[${toPoke.frenchTypes.map(t => `'${t}'`).join(',')}]`;
         const buttonHtml = showButton
-            ? `<button class="evolution-confirm-btn" onclick="markEvolved(${fromPoke.id}, ${toPoke.id}, '${toPoke.frenchName}', '${toPoke.sprites.front_default}')">✅ Marquer comme évolué</button>`
+            ? `<button class="evolution-confirm-btn" onclick="markEvolved(${fromPoke.id}, ${toPoke.id}, '${toPoke.frenchName}', '${toPoke.sprites.front_default}', ${toTypesJs})">✅ Marquer comme évolué</button>`
             : '';
 
         return `
@@ -973,11 +978,11 @@ function renderEvolutionsTab() {
 }
 
 // === Marque un Pokémon de l'équipe comme évolué (remplace son entrée) ===
-function markEvolved(oldId, newId, newName, newImage) {
+function markEvolved(oldId, newId, newName, newImage, newTypes) {
     const idx = userTeam.findIndex(p => p.id === oldId);
     if (idx === -1) return;
 
-    userTeam[idx] = { id: newId, name: newName, image: newImage };
+    userTeam[idx] = { id: newId, name: newName, image: newImage, types: newTypes };
     saveTeam();
     updateTeamDisplay();
 }
@@ -1127,7 +1132,7 @@ statsAddTeamBtn.addEventListener('click', () => {
     if (!statsSelectedPoke1) return;
     const poke = allPokemon.find(p => p.id === statsSelectedPoke1);
     if (!poke) return;
-    addToTeam(poke.id, poke.frenchName, poke.sprites.front_default);
+    addToTeam(poke.id, poke.frenchName, poke.sprites.front_default, poke.frenchTypes);
 });
 
 function updateStatsChart() {
@@ -1140,6 +1145,7 @@ function updateStatsChart() {
         abilitiesSectionDisplay.innerHTML = '';
         movesSectionDisplay.innerHTML = '';
         statsAddTeamBtn.style.display = 'none';
+        statsTypesDisplay.textContent = '';
         return;
     }
 
@@ -1148,6 +1154,12 @@ function updateStatsChart() {
 
     statsAddTeamBtn.textContent = `Ajouter ${poke1.frenchName} à "Mon Équipe"`;
     statsAddTeamBtn.style.display = 'block';
+
+    let typesText = `Type(s) de ${poke1.frenchName} : ${poke1.frenchTypes.join(', ')}`;
+    if (poke2) {
+        typesText += `  |  Type(s) de ${poke2.frenchName} : ${poke2.frenchTypes.join(', ')}`;
+    }
+    statsTypesDisplay.textContent = typesText;
 
     const labels = statOrder.map(s => statNamesFr[s]);
     const values1 = getStatValues(poke1);
