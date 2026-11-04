@@ -9,7 +9,7 @@ Les données (types, stats, talents, capacités, zones, conditions d'évolution)
 | Onglet | Contenu |
 |---|---|
 | **Pokédex** | Pokémon du jeu, dans l'ordre du Pokédex régional. Recherche (sans tenir compte des accents), filtres par type et par zone de rencontre. |
-| **Mon Équipe** | Jusqu'à 6 Pokémon, **une équipe par jeu**, sauvegardée dans le navigateur. **Analyse de l'équipe** : points faibles partagés, types qui les compenseraient, couverture offensive et tableau des dégâts subis par type d'attaque. |
+| **Mon Équipe** | Jusqu'à 6 Pokémon, **une équipe par jeu**, sauvegardée dans le navigateur. Pour chaque membre, choix du **talent** et de **4 capacités**. **Analyse de l'équipe** : points faibles partagés (talents compris : Lévitation, Absorb Eau…), types qui les compenseraient, couverture offensive avec les capacités choisies, et tableaux des dégâts subis et infligés par type. |
 | **Calculatrice** | Efficacité d'un type d'attaque contre un ou deux types, avec la table des types de la génération du jeu. |
 | **Générateur** | Équipe aléatoire (sans doublon de type, évolutions finales, sans légendaires). |
 | **Évolutions** | Évolutions possibles de ton équipe et chaîne complète de n'importe quel Pokémon, avec les conditions du jeu (objets, lieux, moment de la journée…). |

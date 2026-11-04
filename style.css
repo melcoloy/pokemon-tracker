@@ -266,7 +266,7 @@ header h1 {
 /* Équipe */
 .team-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 15px;
 }
 
@@ -871,9 +871,71 @@ header h1 {
 
 /* Cases colorées : le texte (×2, ×½…) porte aussi l'information, pas seulement la couleur */
 .mult-weak4 { background: #c62828; color: white !important; }
-.mult-weak { background: #ffcdd2; color: #8e1c1c !important; }
-.mult-resist { background: #c8e6c9; color: #1b5e20 !important; }
+.mult-weak, .eff-bad { background: #ffcdd2; color: #8e1c1c !important; }
+.mult-resist, .eff-good { background: #c8e6c9; color: #1b5e20 !important; }
 .mult-immune { background: #37474f; color: white !important; }
+
+.ability-mark {
+    margin-left: 1px;
+    font-weight: 700;
+}
+
+.analysis-col-note {
+    font-weight: normal;
+    font-size: 0.85em;
+    color: #555;
+}
+
+/* Volet "Talent et capacités" des cartes de l'équipe */
+.team-config {
+    width: 100%;
+    margin: 8px 0 10px;
+    text-align: left;
+    font-size: 0.88em;
+}
+
+.team-config summary {
+    cursor: pointer;
+    color: #4c5fd5;
+    font-weight: 600;
+    text-align: center;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+.team-config summary:hover {
+    background: #f0f2ff;
+}
+
+.team-config-summary {
+    color: #555;
+    font-weight: normal;
+    font-size: 0.92em;
+}
+
+.team-config-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 8px;
+    color: #333;
+}
+
+.team-config-field select {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: white;
+    color: #333;
+    font-size: 0.95em;
+}
+
+.team-config-missing {
+    color: #6b6b6b;
+    font-size: 0.85em;
+    margin: 6px 0;
+}
 
 .count-alert {
     color: #b71c1c !important;
@@ -949,8 +1011,21 @@ html.dark-mode .analysis-table td {
     border-bottom-color: #444;
 }
 
-html.dark-mode .mult-weak { background: #5c1f24; color: #ffc9cc !important; }
-html.dark-mode .mult-resist { background: #1f4a2f; color: #b6f0c4 !important; }
+html.dark-mode .mult-weak,
+html.dark-mode .eff-bad { background: #5c1f24; color: #ffc9cc !important; }
+html.dark-mode .mult-resist,
+html.dark-mode .eff-good { background: #1f4a2f; color: #b6f0c4 !important; }
+html.dark-mode .analysis-col-note,
+html.dark-mode .team-config-summary { color: #c0c0d4; }
+html.dark-mode .team-config summary { color: #a8b4ff; }
+html.dark-mode .team-config summary:hover { background: #33334d; }
+html.dark-mode .team-config-field { color: #e6e6f0; }
+html.dark-mode .team-config-field select {
+    background: #1e1e2e;
+    border-color: #555;
+    color: #e6e6f0;
+}
+html.dark-mode .team-config-missing { color: #a8a8c0; }
 html.dark-mode .mult-immune { background: #101018; color: #e6e6f0 !important; }
 html.dark-mode .count-alert { color: #ff8a8a !important; }
 

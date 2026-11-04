@@ -89,6 +89,91 @@ function saveTeam() {
     writeStorage('userTeams', teamsByGame);
 }
 
+// === Talent et capacités choisis pour un membre (utilisés par l'analyse de l'équipe) ===
+const MAX_CHOSEN_MOVES = 4;
+
+// Talents possibles du Pokémon dans ce jeu (aucun avant la 3e génération)
+function getPossibleAbilities(poke) {
+    if (currentGeneration < 3 || !Array.isArray(poke.abilities)) return [];
+    return poke.abilities;
+}
+
+// Talent retenu : celui choisi s'il est encore possible, sinon le premier talent normal
+function getEffectiveAbility(teamMon, poke) {
+    const abilities = getPossibleAbilities(poke);
+    if (abilities.length === 0) return null;
+    if (teamMon.ability && abilities.some(a => a.name === teamMon.ability)) return teamMon.ability;
+    const firstNormal = abilities.find(a => !a.isHidden) || abilities[0];
+    return firstNormal.name;
+}
+
+// Capacités apprenables dans ce jeu (toutes méthodes), triées par nom français
+function getLearnableMoves(poke) {
+    const learnset = gameExtra && gameExtra.learnsets && gameExtra.learnsets[poke.name];
+    if (!learnset) return [];
+    const moves = new Set([
+        ...(learnset.level || []).map(([, move]) => move),
+        ...(learnset.machine || []),
+        ...(learnset.egg || []),
+        ...(learnset.tutor || [])
+    ]);
+    return [...moves].sort((a, b) => moveNameFr(a).localeCompare(moveNameFr(b)));
+}
+
+// Capacités choisies encore apprenables (4 emplacements, '' = vide)
+function getChosenMoves(teamMon, poke) {
+    const learnable = new Set(getLearnableMoves(poke));
+    const chosen = Array.isArray(teamMon.moves) ? teamMon.moves : [];
+    return Array.from({ length: MAX_CHOSEN_MOVES }, (_, i) => (learnable.has(chosen[i]) ? chosen[i] : ''));
+}
+
+function teamConfigSummaryText(teamMon, poke) {
+    const count = getChosenMoves(teamMon, poke).filter(Boolean).length;
+    const ability = getEffectiveAbility(teamMon, poke);
+    const abilityText = ability ? (frNames.abilities[ability] || formatLocationName(ability)) : null;
+    return `${abilityText ? `${abilityText} · ` : ''}${count}/${MAX_CHOSEN_MOVES} capacités`;
+}
+
+// === Volet "Talent et capacités" d'une carte de l'équipe ===
+function teamConfigHtml(teamMon, index) {
+    const poke = findTeamMonInGame(teamMon);
+    if (!poke) return '<p class="team-config-missing">Pas dans ce jeu</p>';
+
+    const abilities = getPossibleAbilities(poke);
+    const effectiveAbility = getEffectiveAbility(teamMon, poke);
+    const abilityField = abilities.length === 0 ? '' : `
+        <label class="team-config-field">
+            <span>Talent</span>
+            <select data-index="${index}" data-field="ability">
+                ${abilities.map(a => `<option value="${escapeHtml(a.name)}" ${a.name === effectiveAbility ? 'selected' : ''}>${escapeHtml(frNames.abilities[a.name] || formatLocationName(a.name))}${a.isHidden ? ' (caché)' : ''}</option>`).join('')}
+            </select>
+        </label>`;
+
+    const learnable = getLearnableMoves(poke);
+    const chosen = getChosenMoves(teamMon, poke);
+    const moveOptions = learnable.map(move => {
+        const type = gameExtra.moves && gameExtra.moves[move] ? gameExtra.moves[move][0] : null;
+        return { move, label: `${moveNameFr(move)}${type ? ` (${typeNameFr(type)})` : ''}` };
+    });
+    const moveFields = learnable.length === 0
+        ? '<p class="team-config-missing">Capacités indisponibles pour ce jeu</p>'
+        : chosen.map((current, slot) => `
+            <label class="team-config-field">
+                <span>Capacité ${slot + 1}</span>
+                <select data-index="${index}" data-field="move" data-slot="${slot}">
+                    <option value="">—</option>
+                    ${moveOptions.map(o => `<option value="${escapeHtml(o.move)}" ${o.move === current ? 'selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}
+                </select>
+            </label>`).join('');
+
+    return `
+        <details class="team-config">
+            <summary>Talent et capacités<br><span class="team-config-summary" data-summary-index="${index}">${escapeHtml(teamConfigSummaryText(teamMon, poke))}</span></summary>
+            ${abilityField}
+            ${moveFields}
+        </details>`;
+}
+
 function updateTeamDisplay() {
     if (userTeam.length === 0) {
         teamDisplay.innerHTML = '<p>Aucun Pokémon ajouté. Clique sur un Pokémon dans le Pokédex pour le consulter, puis ajoute-le depuis l\'onglet Statistiques !</p>';
@@ -99,6 +184,7 @@ function updateTeamDisplay() {
                 <h4>${escapeHtml(poke.name)}</h4>
                 <p>#${poke.id}</p>
                 <p class="types">${(poke.types && poke.types.length) ? escapeHtml(poke.types.join(', ')) : 'Type(s) inconnu(s)'}</p>
+                ${teamConfigHtml(poke, index)}
                 <button class="remove-btn" data-index="${index}">Supprimer</button>
             </div>
         `).join('');
@@ -111,4 +197,28 @@ function updateTeamDisplay() {
 teamDisplay.addEventListener('click', (e) => {
     const btn = e.target.closest('.remove-btn[data-index]');
     if (btn) removeFromTeam(Number(btn.dataset.index));
+});
+
+// === Choix du talent ou d'une capacité : enregistre et met à jour l'analyse ===
+// (sans redessiner les cartes, pour ne pas faire perdre le focus au clavier)
+teamDisplay.addEventListener('change', (e) => {
+    const select = e.target.closest('select[data-index][data-field]');
+    if (!select) return;
+    const teamMon = userTeam[Number(select.dataset.index)];
+    if (!teamMon) return;
+
+    if (select.dataset.field === 'ability') {
+        teamMon.ability = select.value;
+    } else {
+        const moves = Array.isArray(teamMon.moves) ? [...teamMon.moves] : [];
+        while (moves.length < MAX_CHOSEN_MOVES) moves.push('');
+        moves[Number(select.dataset.slot)] = select.value;
+        teamMon.moves = moves;
+    }
+    saveTeam();
+
+    const poke = findTeamMonInGame(teamMon);
+    const summary = teamDisplay.querySelector(`[data-summary-index="${select.dataset.index}"]`);
+    if (poke && summary) summary.textContent = teamConfigSummaryText(teamMon, poke);
+    renderTeamAnalysis();
 });

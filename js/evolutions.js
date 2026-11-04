@@ -203,7 +203,11 @@ function markEvolved(teamIndex, toSpeciesName) {
     const toPoke = nameToPoke[toSpeciesName];
     if (!toPoke || !userTeam[teamIndex]) return;
 
+    // Garde les capacités choisies (celles que l'évolution ne peut pas apprendre seront ignorées) ;
+    // le talent est réinitialisé car il change souvent à l'évolution
+    const previousMoves = userTeam[teamIndex].moves;
     userTeam[teamIndex] = teamEntryFromPoke(toPoke);
+    if (Array.isArray(previousMoves)) userTeam[teamIndex].moves = previousMoves;
     saveTeam();
     updateTeamDisplay();
 }
