@@ -6,6 +6,8 @@
 //   node export-data.js red yellow     -> exporte seulement les jeux listés
 //
 // Nécessite Node 18 ou plus récent (pour le fetch natif). Vérifie avec : node -v
+//
+// Les anciennes stats et anciens talents (data/past.json) sont générés à part : node export-past-data.js
 
 const fs = require('fs');
 const path = require('path');

@@ -61,6 +61,7 @@ let statsSelectedPoke2 = null;
 const gameCache = {}; // cache par jeu : { pokemon, versionGroupName, regionName, evolutionMap, versionNames }
 let currentVersionGroupName = null; // version_group du jeu actif (pour filtrer les capacités)
 let currentRegionName = null; // région associée au jeu actif (pour le filtre par zone et les formes régionales)
+let currentGeneration = 9; // génération du jeu actif (mise à jour à chaque chargement de jeu)
 let currentGameVersions = []; // noms des versions individuelles du jeu actif (ex: ['red','blue'])
 const locationsCache = {}; // cache des listes de zones (avec Pokémon) par "région::version"
 const locationPokemonCache = {}; // cache des Pokémon par zone (clé: "location::version")
@@ -163,6 +164,93 @@ function applyGenerationPokemonTypes(pokemonList, generation) {
         poke.types = rule.types.map(t => ({ type: { name: t } }));
         poke.frenchTypes = rule.types.map(t => typeTranslations[t] || TYPE_NAMES_FR_FALLBACK[t] || t);
     });
+}
+
+// === Anciennes stats et anciens talents (data/past.json, généré par export-past-data.js) ===
+let pastDataPromise = null;
+
+function loadPastData() {
+    if (!pastDataPromise) {
+        pastDataPromise = fetch('data/past.json')
+            .then(res => (res.ok ? res.json() : null))
+            .catch(() => null);
+    }
+    return pastDataPromise;
+}
+
+// Parmi des entrées { until, ... }, garde celle qui s'applique à la génération donnée :
+// la plus ancienne "until" encore >= génération (ou undefined si la valeur actuelle s'applique)
+function pickPastEntry(entries, generation) {
+    return entries
+        .filter(e => e.until >= generation)
+        .sort((a, b) => a.until - b.until)[0];
+}
+
+function abilityApiUrl(abilityName) {
+    return `https://pokeapi.co/api/v2/ability/${abilityName}/`;
+}
+
+// === Remplace stats et talents actuels par ceux de la génération du jeu ===
+function applyGenerationStatsAndAbilities(pokemonList, generation, pastData) {
+    const pastStatsByName = (pastData && pastData.stats) || {};
+    const pastAbilitiesByName = (pastData && pastData.abilities) || {};
+
+    pokemonList.forEach(poke => {
+        // --- Stats ---
+        if (Array.isArray(poke.stats)) {
+            const pastStats = pastStatsByName[poke.name] || [];
+            poke.stats = poke.stats.map(s => {
+                const past = pickPastEntry(pastStats.filter(p => p.stat === s.stat.name), generation);
+                return past ? { ...s, base_stat: past.value } : s;
+            });
+
+            // Gén. 1 : une seule stat "Spécial" à la place d'Attaque Spé. / Défense Spé.
+            if (generation === 1) {
+                const special = pickPastEntry(pastStats.filter(p => p.stat === 'special'), generation);
+                const spAtk = poke.stats.find(s => s.stat.name === 'special-attack');
+                const value = special ? special.value : (spAtk ? spAtk.base_stat : 0);
+                poke.stats = poke.stats
+                    .filter(s => s.stat.name !== 'special-attack' && s.stat.name !== 'special-defense')
+                    .concat([{ base_stat: value, effort: 0, stat: { name: 'special' } }]);
+            }
+        }
+
+        // --- Talents ---
+        if (!Array.isArray(poke.abilities)) return; // ancien fichier local sans talents
+
+        if (generation < 3) {
+            poke.abilities = []; // les talents apparaissent en gén. 3
+            return;
+        }
+
+        // Reconstitue les emplacements : talents normaux = 1 puis 2, talent caché = 3
+        const slots = {};
+        let normalSlot = 1;
+        poke.abilities.forEach(a => {
+            if (a.isHidden) slots[3] = a;
+            else slots[normalSlot++] = a;
+        });
+
+        const pastAbilities = pastAbilitiesByName[poke.name] || [];
+        [1, 2, 3].forEach(slot => {
+            const past = pickPastEntry(pastAbilities.filter(p => p.slot === slot), generation);
+            if (!past) return;
+            if (past.name) slots[slot] = { name: past.name, url: abilityApiUrl(past.name), isHidden: past.isHidden };
+            else delete slots[slot];
+        });
+
+        // Les talents cachés apparaissent en gén. 5
+        if (generation < 5) delete slots[3];
+
+        poke.abilities = [1, 2, 3].filter(slot => slots[slot]).map(slot => slots[slot]);
+    });
+}
+
+// === Applique toutes les règles de génération (types, stats, talents) aux Pokémon d'un jeu ===
+async function applyGenerationRules(pokemonList, versionSlug) {
+    const generation = getGameGeneration(versionSlug);
+    applyGenerationPokemonTypes(pokemonList, generation);
+    applyGenerationStatsAndAbilities(pokemonList, generation, await loadPastData());
 }
 
 // === Fixe le multiplicateur d'un type d'attaque contre un type défenseur dans une table ===
@@ -434,7 +522,7 @@ async function loadGame(versionSlug) {
     if (fileData) {
         gameLoadingIndicator.textContent = '⚡ Chargé depuis un fichier local';
         allPokemon = fileData.pokemon;
-        applyGenerationPokemonTypes(allPokemon, getGameGeneration(versionSlug));
+        await applyGenerationRules(allPokemon, versionSlug);
         currentVersionGroupName = fileData.versionGroupName;
         currentRegionName = fileData.regionName;
         currentGameVersions = fileData.versionNames || [];
@@ -514,7 +602,7 @@ async function loadGame(versionSlug) {
             if (orderA[0] !== orderB[0]) return orderA[0] - orderB[0];
             return orderA[1] - orderB[1];
         });
-        applyGenerationPokemonTypes(allPokemon, getGameGeneration(versionSlug));
+        await applyGenerationRules(allPokemon, versionSlug);
 
         currentVersionGroupName = versionGroupName;
         currentRegionName = regionName;
@@ -546,6 +634,7 @@ async function loadGame(versionSlug) {
 
 // === Réinitialise tous les onglets après le chargement d'un nouveau jeu ===
 function afterGameLoaded() {
+    currentGeneration = getGameGeneration(gameSelect.value);
     searchInput.value = '';
     populateTypeFilter();
 
@@ -1320,12 +1409,19 @@ const statNamesFr = {
     defense: 'Défense',
     'special-attack': 'Attaque Spé.',
     'special-defense': 'Défense Spé.',
-    speed: 'Vitesse'
+    speed: 'Vitesse',
+    special: 'Spécial'
 };
-const statOrder = ['hp', 'attack', 'defense', 'special-attack', 'special-defense', 'speed'];
+
+// Gén. 1 : 5 stats (une seule stat Spécial) ; ensuite : 6 stats
+function getStatOrder() {
+    return currentGeneration === 1
+        ? ['hp', 'attack', 'defense', 'special', 'speed']
+        : ['hp', 'attack', 'defense', 'special-attack', 'special-defense', 'speed'];
+}
 
 function getStatValues(poke) {
-    return statOrder.map(statName => {
+    return getStatOrder().map(statName => {
         const found = poke.stats.find(s => s.stat.name === statName);
         return found ? found.base_stat : 0;
     });
@@ -1432,6 +1528,7 @@ function updateStatsChart() {
     }
     statsTypesDisplay.textContent = typesText;
 
+    const statOrder = getStatOrder();
     const labels = statOrder.map(s => statNamesFr[s]);
     const values1 = getStatValues(poke1);
 
@@ -1504,6 +1601,14 @@ async function getFrenchAbilityName(abilityUrl, abilityNameEn) {
 
 // === Talents : affiche la section sous les stats pour le Pokémon sélectionné ===
 async function renderAbilitiesSection(poke) {
+    if (currentGeneration < 3) {
+        abilitiesSectionDisplay.innerHTML = `
+            <h3>Talents</h3>
+            <p class="evolutions-empty">Les talents n'existent pas encore dans ce jeu (ils apparaissent en 3e génération, avec Rubis / Saphir).</p>
+        `;
+        return;
+    }
+
     if (!poke.abilities) {
         abilitiesSectionDisplay.innerHTML = `
             <h3>Talents</h3>
