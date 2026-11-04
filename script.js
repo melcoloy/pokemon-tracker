@@ -18,6 +18,7 @@ const defType1Select = document.getElementById('def-type1-select');
 const defType2Select = document.getElementById('def-type2-select');
 const calculateBtn = document.getElementById('calculate-btn');
 const calcResult = document.getElementById('calc-result');
+const calcGenNote = document.getElementById('calc-gen-note');
 const evolutionsListDisplay = document.getElementById('evolutions-list');
 const evolutionSearchInput = document.getElementById('evolution-search');
 const evolutionSearchResult = document.getElementById('evolution-search-result');
@@ -43,13 +44,14 @@ const themeToggleBtn = document.getElementById('theme-toggle-btn');
 
 // État de l'app
 let allPokemon = [];
-let userTeam = JSON.parse(localStorage.getItem('userTeam')) || [];
+let userTeam = loadSavedTeam();
 let currentGeneratedTeam = [];
 const typeTranslations = {}; // cache des traductions de types
 const evolutionChainCache = {}; // cache des chaînes d'évolution brutes (par URL), utilisé uniquement lors d'un chargement API live
 const moveNameTranslations = {}; // cache des traductions de capacités (nom anglais -> français), partagé entre tous les jeux
 const abilityNameTranslations = {}; // cache des traductions de talents (nom anglais -> français), partagé entre tous les jeux
-let typeChart = {}; // relations de dégâts par type (en anglais)
+let typeChart = {}; // relations de dégâts par type (en anglais), état actuel (dernière génération)
+let currentTypeChart = {}; // table des types adaptée à la génération du jeu actif (utilisée par la calculatrice)
 let nameToPoke = {}; // nom d'ESPÈCE (anglais) -> objet Pokémon complet (pour le jeu actif)
 let evolutionMap = {}; // nom d'espèce (anglais) -> [{ toName, method }] (pour le jeu actif)
 let parentMap = {}; // nom d'espèce enfant -> nom d'espèce parent (pour le jeu actif)
@@ -84,6 +86,136 @@ const regionFormLabelsFr = {
     hisui: 'Hisui',
     paldea: 'Paldea'
 };
+
+// === Construit le suffixe "(Forme d'Alola)" / "(Forme de Galar)" avec l'élision correcte ===
+function regionalFormSuffix(regionName) {
+    const label = regionFormLabelsFr[regionName] || regionName;
+    const preposition = /^[aeiouyéèêàâîôûh]/i.test(label) ? 'd\'' : 'de ';
+    return `(Forme ${preposition}${label})`;
+}
+
+// === Échappe une chaîne avant de l'insérer dans du HTML (texte ou attribut) ===
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// === Règles propres à chaque génération ===
+// Les données (types des Pokémon, table des types) viennent de PokéAPI dans leur état ACTUEL.
+// On les corrige ici pour les jeux plus anciens.
+
+// Génération de chaque jeu (sert à choisir la bonne table des types et les bons types de Pokémon)
+const GAME_GENERATION = {
+    'red': 1, 'yellow': 1,
+    'gold': 2, 'crystal': 2,
+    'ruby': 3, 'emerald': 3, 'firered': 3,
+    'diamond': 4, 'platinum': 4, 'heartgold': 4,
+    'black': 5, 'black-2': 5,
+    'x': 6, 'omega-ruby': 6,
+    'sun': 7, 'ultra-sun': 7, 'lets-go-pikachu': 7,
+    'sword': 8, 'brilliant-diamond': 8, 'legends-arceus': 8,
+    'scarlet': 9
+};
+
+function getGameGeneration(versionSlug) {
+    return GAME_GENERATION[versionSlug] || 9;
+}
+
+// Types qui n'existent pas encore dans une génération donnée
+function typeExistsInGeneration(typeName, generation) {
+    if (typeName === 'steel' || typeName === 'dark') return generation >= 2;
+    if (typeName === 'fairy') return generation >= 6;
+    if (typeName === 'stellar') return generation >= 9;
+    return true;
+}
+
+// Anciens types des Pokémon modifiés par l'arrivée des types Acier (gén. 2) et Fée (gén. 6).
+// "until" = dernière génération où l'ancien typage s'applique.
+const PAST_POKEMON_TYPES = [
+    { until: 1, names: ['magnemite', 'magneton'], types: ['electric'] },
+    { until: 5, names: ['clefairy', 'clefable', 'cleffa', 'jigglypuff', 'wigglytuff', 'igglybuff', 'snubbull', 'granbull', 'togepi', 'azurill'], types: ['normal'] },
+    { until: 5, names: ['togetic', 'togekiss'], types: ['normal', 'flying'] },
+    { until: 5, names: ['mr-mime', 'mime-jr', 'ralts', 'kirlia', 'gardevoir'], types: ['psychic'] },
+    { until: 5, names: ['marill', 'azumarill'], types: ['water'] },
+    { until: 5, names: ['mawile'], types: ['steel'] },
+    { until: 5, names: ['cottonee', 'whimsicott'], types: ['grass'] }
+];
+
+// Noms français de secours (au cas où la table des types n'est pas encore chargée)
+const TYPE_NAMES_FR_FALLBACK = {
+    normal: 'Normal', flying: 'Vol', psychic: 'Psy', water: 'Eau',
+    grass: 'Plante', electric: 'Électrik', steel: 'Acier'
+};
+
+// === Remplace les types actuels par ceux de la génération du jeu (ex : Mélofée Normal dans Rouge) ===
+function applyGenerationPokemonTypes(pokemonList, generation) {
+    pokemonList.forEach(poke => {
+        // Prend la règle la plus ancienne qui s'applique encore (ex : Magnéti en gén. 1)
+        const rule = PAST_POKEMON_TYPES
+            .filter(r => generation <= r.until && r.names.includes(poke.name))
+            .sort((a, b) => a.until - b.until)[0];
+        if (!rule) return;
+
+        poke.types = rule.types.map(t => ({ type: { name: t } }));
+        poke.frenchTypes = rule.types.map(t => typeTranslations[t] || TYPE_NAMES_FR_FALLBACK[t] || t);
+    });
+}
+
+// === Fixe le multiplicateur d'un type d'attaque contre un type défenseur dans une table ===
+function setTypeRelation(chart, atkType, defType, multiplier) {
+    const rel = chart[atkType];
+    if (!rel) return;
+    rel.double_damage_to = rel.double_damage_to.filter(t => t !== defType);
+    rel.half_damage_to = rel.half_damage_to.filter(t => t !== defType);
+    rel.no_damage_to = rel.no_damage_to.filter(t => t !== defType);
+    if (multiplier === 2) rel.double_damage_to.push(defType);
+    else if (multiplier === 0.5) rel.half_damage_to.push(defType);
+    else if (multiplier === 0) rel.no_damage_to.push(defType);
+}
+
+// === Construit la table des types valable pour une génération à partir de la table actuelle ===
+function getTypeChartForGeneration(generation) {
+    const chart = {};
+    Object.entries(typeChart).forEach(([atkType, rel]) => {
+        if (!typeExistsInGeneration(atkType, generation)) return;
+        const keep = t => typeExistsInGeneration(t, generation);
+        chart[atkType] = {
+            double_damage_to: rel.double_damage_to.filter(keep),
+            half_damage_to: rel.half_damage_to.filter(keep),
+            no_damage_to: rel.no_damage_to.filter(keep)
+        };
+    });
+
+    // Gén. 2 à 5 : l'Acier résistait aux types Spectre et Ténèbres
+    if (generation >= 2 && generation <= 5) {
+        setTypeRelation(chart, 'ghost', 'steel', 0.5);
+        setTypeRelation(chart, 'dark', 'steel', 0.5);
+    }
+
+    // Gén. 1 : quelques relations différentes
+    if (generation === 1) {
+        setTypeRelation(chart, 'bug', 'poison', 2);
+        setTypeRelation(chart, 'poison', 'bug', 2);
+        setTypeRelation(chart, 'ghost', 'psychic', 0);
+        setTypeRelation(chart, 'ice', 'fire', 1);
+    }
+
+    return chart;
+}
+
+// === Équipe sauvegardée : lecture tolérante (données absentes, corrompues ou stockage bloqué) ===
+function loadSavedTeam() {
+    try {
+        const saved = JSON.parse(localStorage.getItem('userTeam'));
+        return Array.isArray(saved) ? saved.filter(p => p && typeof p.id === 'number') : [];
+    } catch (e) {
+        return [];
+    }
+}
 
 // === Mode sombre : bascule et sauvegarde de la préférence ===
 function applyTheme(isDark) {
@@ -302,6 +434,7 @@ async function loadGame(versionSlug) {
     if (fileData) {
         gameLoadingIndicator.textContent = '⚡ Chargé depuis un fichier local';
         allPokemon = fileData.pokemon;
+        applyGenerationPokemonTypes(allPokemon, getGameGeneration(versionSlug));
         currentVersionGroupName = fileData.versionGroupName;
         currentRegionName = fileData.regionName;
         currentGameVersions = fileData.versionNames || [];
@@ -346,7 +479,7 @@ async function loadGame(versionSlug) {
                     );
 
                     const frenchName = isRegionalForm
-                        ? `${frenchNameBase} (Forme de ${regionFormLabelsFr[regionName] || regionName})`
+                        ? `${frenchNameBase} ${regionalFormSuffix(regionName)}`
                         : frenchNameBase;
 
                     const abilities = pokeData.abilities.map(a => ({
@@ -381,6 +514,7 @@ async function loadGame(versionSlug) {
             if (orderA[0] !== orderB[0]) return orderA[0] - orderB[0];
             return orderA[1] - orderB[1];
         });
+        applyGenerationPokemonTypes(allPokemon, getGameGeneration(versionSlug));
 
         currentVersionGroupName = versionGroupName;
         currentRegionName = regionName;
@@ -422,6 +556,7 @@ function afterGameLoaded() {
     }
 
     displayPokemon(allPokemon);
+    refreshCalculatorForGame();
 
     evolutionSearchInput.value = '';
     evolutionSearchResult.innerHTML = '';
@@ -481,6 +616,7 @@ function exportGameData() {
         versionSlug: gameSelect.value,
         versionGroupName: currentVersionGroupName,
         regionName: currentRegionName,
+        versionNames: currentGameVersions,
         pokemon: allPokemon,
         evolutionMap
     };
@@ -535,39 +671,43 @@ async function buildLocationsWithPokemon(regionName, versionSlug) {
     if (locationsCache[cacheKey]) return locationsCache[cacheKey];
 
     const regionRes = await fetch(`https://pokeapi.co/api/v2/region/${regionName}`);
+    if (!regionRes.ok) throw new Error(`HTTP ${regionRes.status} pour la région ${regionName}`);
     const regionData = await regionRes.json();
 
-    const locationResults = await Promise.all(
-        regionData.locations.map(async (loc) => {
-            try {
-                const locRes = await fetch(loc.url);
-                const locData = await locRes.json();
+    // Nombre limité de zones chargées en parallèle (une région compte des centaines de zones :
+    // tout lancer d'un coup surcharge PokéAPI et le navigateur)
+    const locationResults = await mapWithConcurrencyBrowser(regionData.locations, 6, async (loc) => {
+        try {
+            const locRes = await fetch(loc.url);
+            if (!locRes.ok) return null;
+            const locData = await locRes.json();
 
-                const speciesSet = new Set();
+            const speciesSet = new Set();
 
-                await Promise.all(locData.areas.map(async (area) => {
-                    const areaRes = await fetch(area.url);
-                    const areaData = await areaRes.json();
-                    areaData.pokemon_encounters.forEach(enc => {
-                        const availableHere = enc.version_details.some(vd => vd.version.name === versionSlug);
-                        if (availableHere) speciesSet.add(enc.pokemon.name);
-                    });
-                }));
-
-                if (speciesSet.size === 0) return null;
-
-                locationPokemonCache[`${loc.name}::${versionSlug}`] = speciesSet;
-
-                const frEntry = locData.names.find(n => n.language.name === 'fr');
-                const label = frEntry ? frEntry.name : formatLocationName(loc.name);
-
-                return { name: loc.name, label };
-            } catch (e) {
-                console.warn(`Impossible de charger la zone ${loc.name}`, e);
-                return null;
+            // Les sous-zones d'une zone sont chargées une par une
+            for (const area of locData.areas) {
+                const areaRes = await fetch(area.url);
+                if (!areaRes.ok) continue;
+                const areaData = await areaRes.json();
+                areaData.pokemon_encounters.forEach(enc => {
+                    const availableHere = enc.version_details.some(vd => vd.version.name === versionSlug);
+                    if (availableHere) speciesSet.add(enc.pokemon.name);
+                });
             }
-        })
-    );
+
+            if (speciesSet.size === 0) return null;
+
+            locationPokemonCache[`${loc.name}::${versionSlug}`] = speciesSet;
+
+            const frEntry = locData.names.find(n => n.language.name === 'fr');
+            const label = frEntry ? frEntry.name : formatLocationName(loc.name);
+
+            return { name: loc.name, label };
+        } catch (e) {
+            console.warn(`Impossible de charger la zone ${loc.name}`, e);
+            return null;
+        }
+    });
 
     const locations = locationResults.filter(Boolean).sort((a, b) => a.label.localeCompare(b.label));
     locationsCache[cacheKey] = locations;
@@ -637,15 +777,20 @@ function displayPokemon(pokemonList) {
         const nationalLabel = `Nat. #${poke.id.toString().padStart(3, '0')}`;
 
         return `
-            <div class="pokemon-card" onclick="selectPokemonInStats(${poke.id})">
-                <img src="${getArtworkUrl(poke)}" alt="${poke.frenchName}">
-                <h3>${poke.frenchName}</h3>
+            <div class="pokemon-card" data-id="${poke.id}">
+                <img src="${escapeHtml(getArtworkUrl(poke))}" alt="${escapeHtml(poke.frenchName)}" loading="lazy">
+                <h3>${escapeHtml(poke.frenchName)}</h3>
                 <p><span class="national-num">(${nationalLabel})</span></p>
-                <p class="types">${poke.frenchTypes.join(', ')}</p>
+                <p class="types">${escapeHtml(poke.frenchTypes.join(', '))}</p>
             </div>
         `;
     }).join('');
 }
+
+pokedexList.addEventListener('click', (e) => {
+    const card = e.target.closest('.pokemon-card[data-id]');
+    if (card) selectPokemonInStats(Number(card.dataset.id));
+});
 
 // === Clic sur une carte du Pokédex : redirige vers Statistiques et Capacités avec ce Pokémon sélectionné ===
 function selectPokemonInStats(id) {
@@ -679,49 +824,81 @@ searchInput.addEventListener('input', applyFilters);
 typeFilter.addEventListener('change', applyFilters);
 
 // === Gestion de l'équipe ===
-function addToTeam(id, name, image, types) {
+// Un membre de l'équipe est identifié par le nom de sa VARIÉTÉ (ex : 'raichu' vs 'raichu-alola'),
+// car une forme régionale partage le numéro national de la forme classique.
+// Les anciennes entrées sauvegardées sans "pokemonName" retombent sur le numéro.
+function teamEntryFromPoke(poke) {
+    return {
+        id: poke.id,
+        pokemonName: poke.name,
+        name: poke.frenchName,
+        image: getArtworkUrl(poke),
+        types: poke.frenchTypes
+    };
+}
+
+function isSameTeamMon(teamMon, poke) {
+    return teamMon.pokemonName ? teamMon.pokemonName === poke.name : teamMon.id === poke.id;
+}
+
+// === Retrouve dans le jeu actif le Pokémon correspondant à un membre de l'équipe (ou undefined) ===
+function findTeamMonInGame(teamMon) {
+    return allPokemon.find(p => isSameTeamMon(teamMon, p));
+}
+
+function addToTeam(poke) {
     if (userTeam.length >= 6) {
         alert('Équipe complète ! (6 Pokémon max)');
         return;
     }
 
-    if (userTeam.some(p => p.id === id)) {
+    if (userTeam.some(t => isSameTeamMon(t, poke))) {
         alert('Ce Pokémon est déjà dans votre équipe');
         return;
     }
 
-    userTeam.push({ id, name, image, types });
+    userTeam.push(teamEntryFromPoke(poke));
     saveTeam();
     updateTeamDisplay();
 }
 
-function removeFromTeam(id) {
-    userTeam = userTeam.filter(p => p.id !== id);
+function removeFromTeam(index) {
+    if (index < 0 || index >= userTeam.length) return;
+    userTeam.splice(index, 1);
     saveTeam();
     updateTeamDisplay();
 }
 
 function saveTeam() {
-    localStorage.setItem('userTeam', JSON.stringify(userTeam));
+    try {
+        localStorage.setItem('userTeam', JSON.stringify(userTeam));
+    } catch (e) {
+        console.warn('Impossible de sauvegarder l\'équipe', e);
+    }
 }
 
 function updateTeamDisplay() {
     if (userTeam.length === 0) {
         teamDisplay.innerHTML = '<p>Aucun Pokémon ajouté. Clique sur un Pokémon dans le Pokédex pour le consulter, puis ajoute-le depuis l\'onglet Statistiques !</p>';
     } else {
-        teamDisplay.innerHTML = userTeam.map(poke => `
+        teamDisplay.innerHTML = userTeam.map((poke, index) => `
             <div class="team-slot filled">
-                <img src="${poke.image}" alt="${poke.name}">
-                <h4>${poke.name}</h4>
+                <img src="${escapeHtml(poke.image || '')}" alt="${escapeHtml(poke.name)}">
+                <h4>${escapeHtml(poke.name)}</h4>
                 <p>#${poke.id}</p>
-                <p class="types">${(poke.types && poke.types.length) ? poke.types.join(', ') : 'Type(s) inconnu(s)'}</p>
-                <button class="remove-btn" onclick="removeFromTeam(${poke.id})">Supprimer</button>
+                <p class="types">${(poke.types && poke.types.length) ? escapeHtml(poke.types.join(', ')) : 'Type(s) inconnu(s)'}</p>
+                <button class="remove-btn" data-index="${index}">Supprimer</button>
             </div>
         `).join('');
     }
 
     renderEvolutionsTab();
 }
+
+teamDisplay.addEventListener('click', (e) => {
+    const btn = e.target.closest('.remove-btn[data-index]');
+    if (btn) removeFromTeam(Number(btn.dataset.index));
+});
 
 // === Générateur d'équipe ===
 function shuffleArray(array) {
@@ -786,10 +963,10 @@ function generateTeam() {
 function displayGeneratedTeam(team) {
     generatedTeamDisplay.innerHTML = team.map(poke => `
         <div class="pokemon-card">
-            <img src="${getArtworkUrl(poke)}" alt="${poke.frenchName}">
-            <h3>${poke.frenchName}</h3>
+            <img src="${escapeHtml(getArtworkUrl(poke))}" alt="${escapeHtml(poke.frenchName)}">
+            <h3>${escapeHtml(poke.frenchName)}</h3>
             <p>#${poke.id.toString().padStart(3, '0')}</p>
-            <p class="types">${poke.frenchTypes.join(', ')}</p>
+            <p class="types">${escapeHtml(poke.frenchTypes.join(', '))}</p>
         </div>
     `).join('');
 
@@ -799,12 +976,7 @@ function displayGeneratedTeam(team) {
 function addGeneratedTeamToMyTeam() {
     if (currentGeneratedTeam.length === 0) return;
 
-    userTeam = currentGeneratedTeam.map(poke => ({
-        id: poke.id,
-        name: poke.frenchName,
-        image: getArtworkUrl(poke),
-        types: poke.frenchTypes
-    }));
+    userTeam = currentGeneratedTeam.map(teamEntryFromPoke);
 
     saveTeam();
     updateTeamDisplay();
@@ -821,7 +993,7 @@ async function loadTypeChart() {
     if (fileData) {
         Object.assign(typeChart, fileData.typeChart);
         Object.assign(typeTranslations, fileData.typeTranslations);
-        populateCalcTypeSelects(Object.keys(typeChart));
+        refreshCalculatorForGame();
         return;
     }
 
@@ -849,38 +1021,55 @@ async function loadTypeChart() {
             };
         });
 
-        populateCalcTypeSelects(typeDataList.map(t => t.name));
+        refreshCalculatorForGame();
     } catch (error) {
         console.error('Erreur lors du chargement de la table des types:', error);
     }
 }
 
-function populateCalcTypeSelects(typeNames) {
-    const sorted = typeNames
-        .map(name => ({ name, fr: typeTranslations[name] }))
+// === Calculatrice : (re)construit la table et les menus pour la génération du jeu actif ===
+// Appelée quand la table des types est chargée ET à chaque changement de jeu (l'ordre d'arrivée n'importe pas).
+function refreshCalculatorForGame() {
+    if (Object.keys(typeChart).length === 0) return;
+
+    const generation = getGameGeneration(gameSelect.value);
+    currentTypeChart = getTypeChartForGeneration(generation);
+
+    const sorted = Object.keys(currentTypeChart)
+        .map(name => ({ name, fr: typeTranslations[name] || name }))
         .sort((a, b) => a.fr.localeCompare(b.fr));
 
-    sorted.forEach(({ name, fr }) => {
-        const opt1 = document.createElement('option');
-        opt1.value = name;
-        opt1.textContent = fr;
-        atkTypeSelect.appendChild(opt1);
+    [
+        [atkTypeSelect, '-- Choisir --'],
+        [defType1Select, '-- Choisir --'],
+        [defType2Select, 'Aucun']
+    ].forEach(([select, placeholder]) => {
+        const previous = select.value;
+        select.innerHTML = '';
+        const empty = document.createElement('option');
+        empty.value = '';
+        empty.textContent = placeholder;
+        select.appendChild(empty);
 
-        const opt2 = document.createElement('option');
-        opt2.value = name;
-        opt2.textContent = fr;
-        defType1Select.appendChild(opt2);
+        sorted.forEach(({ name, fr }) => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = fr;
+            select.appendChild(opt);
+        });
 
-        const opt3 = document.createElement('option');
-        opt3.value = name;
-        opt3.textContent = fr;
-        defType2Select.appendChild(opt3);
+        // Garde la sélection précédente si ce type existe encore dans cette génération
+        select.value = currentTypeChart[previous] ? previous : '';
     });
+
+    calcGenNote.textContent = `Table des types de la génération ${generation}.`;
+    calcResult.textContent = '';
+    calcResult.className = 'calc-result';
 }
 
 // === Calculatrice de combat : calcul du multiplicateur ===
 function getMultiplier(atkType, defType) {
-    const relations = typeChart[atkType];
+    const relations = currentTypeChart[atkType];
     if (!relations) return 1;
 
     if (relations.no_damage_to.includes(defType)) return 0;
@@ -901,7 +1090,7 @@ function calculateEffectiveness() {
     }
 
     let multiplier = getMultiplier(atkType, defType1);
-    if (defType2) {
+    if (defType2 && defType2 !== defType1) {
         multiplier *= getMultiplier(atkType, defType2);
     }
 
@@ -1001,24 +1190,23 @@ function renderEvolutionRows(edges, container, emptyMessage, showButton) {
         const toPoke = nameToPoke[edge.toName];
         if (!fromPoke || !toPoke) return '';
 
-        const toTypesJs = `[${toPoke.frenchTypes.map(t => `'${t}'`).join(',')}]`;
         const buttonHtml = showButton
-            ? `<button class="evolution-confirm-btn" onclick="markEvolved(${fromPoke.id}, ${toPoke.id}, '${toPoke.frenchName}', '${getArtworkUrl(toPoke)}', ${toTypesJs})">✅ Marquer comme évolué</button>`
+            ? `<button class="evolution-confirm-btn" data-team-index="${edge.teamIndex}" data-to-species="${escapeHtml(edge.toName)}">✅ Marquer comme évolué</button>`
             : '';
 
         return `
             <div class="evolution-card">
                 <div class="evolution-mon">
-                    <img src="${getArtworkUrl(fromPoke)}" alt="${fromPoke.frenchName}">
-                    <span>${fromPoke.frenchName}</span>
+                    <img src="${escapeHtml(getArtworkUrl(fromPoke))}" alt="${escapeHtml(fromPoke.frenchName)}">
+                    <span>${escapeHtml(fromPoke.frenchName)}</span>
                 </div>
                 <div class="evolution-arrow">➜</div>
                 <div class="evolution-mon">
-                    <img src="${getArtworkUrl(toPoke)}" alt="${toPoke.frenchName}">
-                    <span>${toPoke.frenchName}</span>
+                    <img src="${escapeHtml(getArtworkUrl(toPoke))}" alt="${escapeHtml(toPoke.frenchName)}">
+                    <span>${escapeHtml(toPoke.frenchName)}</span>
                 </div>
                 <div class="evolution-info">
-                    <p class="evolution-method">Condition : ${edge.method}</p>
+                    <p class="evolution-method">Condition : ${escapeHtml(edge.method)}</p>
                     ${buttonHtml}
                 </div>
             </div>
@@ -1033,7 +1221,10 @@ function renderEvolutionsTab() {
         return;
     }
 
-    const teamInThisGame = userTeam.filter(teamMon => allPokemon.some(p => p.id === teamMon.id));
+    // Garde l'index dans userTeam pour pouvoir remplacer le bon membre lors d'une évolution
+    const teamInThisGame = userTeam
+        .map((teamMon, teamIndex) => ({ teamIndex, poke: findTeamMonInGame(teamMon) }))
+        .filter(entry => entry.poke);
 
     if (teamInThisGame.length === 0) {
         evolutionsListDisplay.innerHTML = '<p class="evolutions-empty">Ajoute des Pokémon présents dans ce jeu à "Mon Équipe" pour voir leurs évolutions possibles.</p>';
@@ -1042,13 +1233,10 @@ function renderEvolutionsTab() {
 
     const edges = [];
 
-    teamInThisGame.forEach(teamMon => {
-        const poke = allPokemon.find(p => p.id === teamMon.id);
-        if (!poke) return;
-
+    teamInThisGame.forEach(({ teamIndex, poke }) => {
         const evolutions = evolutionMap[poke.speciesName] || [];
         evolutions.forEach(evo => {
-            edges.push({ fromName: poke.speciesName, toName: evo.toName, method: evo.method });
+            edges.push({ teamIndex, fromName: poke.speciesName, toName: evo.toName, method: evo.method });
         });
     });
 
@@ -1056,14 +1244,19 @@ function renderEvolutionsTab() {
 }
 
 // === Marque un Pokémon de l'équipe comme évolué (remplace son entrée) ===
-function markEvolved(oldId, newId, newName, newImage, newTypes) {
-    const idx = userTeam.findIndex(p => p.id === oldId);
-    if (idx === -1) return;
+function markEvolved(teamIndex, toSpeciesName) {
+    const toPoke = nameToPoke[toSpeciesName];
+    if (!toPoke || !userTeam[teamIndex]) return;
 
-    userTeam[idx] = { id: newId, name: newName, image: newImage, types: newTypes };
+    userTeam[teamIndex] = teamEntryFromPoke(toPoke);
     saveTeam();
     updateTeamDisplay();
 }
+
+evolutionsListDisplay.addEventListener('click', (e) => {
+    const btn = e.target.closest('.evolution-confirm-btn[data-team-index]');
+    if (btn) markEvolved(Number(btn.dataset.teamIndex), btn.dataset.toSpecies);
+});
 
 // === Recherche : trouve le nom d'espèce racine (base) de la chaîne contenant une espèce donnée ===
 function findRootSpecies(speciesName) {
@@ -1115,7 +1308,7 @@ function performEvolutionSearch() {
 
     const rootName = findRootSpecies(match.speciesName);
     const edges = getChainEdgesFromMap(rootName);
-    renderEvolutionRows(edges, evolutionSearchResult, `${match.frenchName} n'évolue pas.`, false);
+    renderEvolutionRows(edges, evolutionSearchResult, `${escapeHtml(match.frenchName)} n'évolue pas.`, false);
 }
 
 evolutionSearchInput.addEventListener('input', performEvolutionSearch);
@@ -1160,7 +1353,7 @@ function renderStatsAutocomplete(query, resultsEl, onSelect) {
     }
 
     resultsEl.innerHTML = matches.map(p => `
-        <div class="autocomplete-item" data-id="${p.id}">#${p.id.toString().padStart(3, '0')} ${p.frenchName}</div>
+        <div class="autocomplete-item" data-id="${p.id}">#${p.id.toString().padStart(3, '0')} ${escapeHtml(p.frenchName)}</div>
     `).join('');
 
     resultsEl.querySelectorAll('.autocomplete-item[data-id]').forEach(item => {
@@ -1210,7 +1403,7 @@ statsAddTeamBtn.addEventListener('click', () => {
     if (!statsSelectedPoke1) return;
     const poke = allPokemon.find(p => p.id === statsSelectedPoke1);
     if (!poke) return;
-    addToTeam(poke.id, poke.frenchName, getArtworkUrl(poke), poke.frenchTypes);
+    addToTeam(poke);
 });
 
 function updateStatsChart() {
@@ -1280,7 +1473,7 @@ function updateStatsChart() {
         }
     });
 
-    let rowsHtml = `<table class="stats-data-table"><thead><tr><th>Statistique</th><th>${poke1.frenchName}</th>${poke2 ? `<th>${poke2.frenchName}</th>` : ''}</tr></thead><tbody>`;
+    let rowsHtml = `<table class="stats-data-table"><thead><tr><th>Statistique</th><th>${escapeHtml(poke1.frenchName)}</th>${poke2 ? `<th>${escapeHtml(poke2.frenchName)}</th>` : ''}</tr></thead><tbody>`;
     statOrder.forEach((statName, i) => {
         rowsHtml += `<tr><td>${statNamesFr[statName]}</td><td>${values1[i]}</td>${poke2 ? `<td>${values2[i]}</td>` : ''}</tr>`;
     });
@@ -1295,12 +1488,18 @@ function updateStatsChart() {
 async function getFrenchAbilityName(abilityUrl, abilityNameEn) {
     if (abilityNameTranslations[abilityNameEn]) return abilityNameTranslations[abilityNameEn];
 
-    const res = await fetch(abilityUrl);
-    const data = await res.json();
-    const frEntry = data.names.find(n => n.language.name === 'fr');
-    const frName = frEntry ? frEntry.name : abilityNameEn;
-    abilityNameTranslations[abilityNameEn] = frName;
-    return frName;
+    try {
+        const res = await fetch(abilityUrl);
+        if (!res.ok) return abilityNameEn;
+        const data = await res.json();
+        const frEntry = data.names.find(n => n.language.name === 'fr');
+        const frName = frEntry ? frEntry.name : abilityNameEn;
+        abilityNameTranslations[abilityNameEn] = frName;
+        return frName;
+    } catch (e) {
+        // API injoignable : on affiche le nom anglais plutôt que de bloquer la section
+        return abilityNameEn;
+    }
 }
 
 // === Talents : affiche la section sous les stats pour le Pokémon sélectionné ===
@@ -1323,11 +1522,11 @@ async function renderAbilitiesSection(poke) {
     if (statsSelectedPoke1 !== poke.id) return;
 
     const itemsHtml = withNames.map(a => `
-        <li>${a.name}${a.isHidden ? '<span class="move-meta">Talent caché</span>' : ''}</li>
+        <li>${escapeHtml(a.name)}${a.isHidden ? '<span class="move-meta">Talent caché</span>' : ''}</li>
     `).join('');
 
     abilitiesSectionDisplay.innerHTML = `
-        <h3>Talents (${poke.frenchName})</h3>
+        <h3>Talents (${escapeHtml(poke.frenchName)})</h3>
         <ul class="moves-list">${itemsHtml}</ul>
     `;
 }
@@ -1336,12 +1535,18 @@ async function renderAbilitiesSection(poke) {
 async function getFrenchMoveName(moveUrl, moveNameEn) {
     if (moveNameTranslations[moveNameEn]) return moveNameTranslations[moveNameEn];
 
-    const res = await fetch(moveUrl);
-    const data = await res.json();
-    const frEntry = data.names.find(n => n.language.name === 'fr');
-    const frName = frEntry ? frEntry.name : moveNameEn;
-    moveNameTranslations[moveNameEn] = frName;
-    return frName;
+    try {
+        const res = await fetch(moveUrl);
+        if (!res.ok) return moveNameEn;
+        const data = await res.json();
+        const frEntry = data.names.find(n => n.language.name === 'fr');
+        const frName = frEntry ? frEntry.name : moveNameEn;
+        moveNameTranslations[moveNameEn] = frName;
+        return frName;
+    } catch (e) {
+        // API injoignable : on affiche le nom anglais plutôt que de bloquer la section
+        return moveNameEn;
+    }
 }
 
 // === Capacités : récupère et catégorise les capacités d'un Pokémon pour le jeu actif ===
@@ -1391,15 +1596,15 @@ async function renderMovesSection(poke) {
     if (statsSelectedPoke1 !== poke.id) return;
 
     const naturalHtml = natural.length
-        ? natural.map(m => `<li>${m.name}<span class="move-meta">${m.label}</span></li>`).join('')
+        ? natural.map(m => `<li>${escapeHtml(m.name)}<span class="move-meta">${escapeHtml(m.label)}</span></li>`).join('')
         : '<li class="moves-empty">Aucune capacité naturelle trouvée pour ce jeu.</li>';
 
     const machineHtml = machine.length
-        ? machine.map(m => `<li>${m.name}</li>`).join('')
+        ? machine.map(m => `<li>${escapeHtml(m.name)}</li>`).join('')
         : '<li class="moves-empty">Aucune CT/CS trouvée pour ce jeu.</li>';
 
     movesSectionDisplay.innerHTML = `
-        <h3>Capacités apprises (${poke.frenchName})</h3>
+        <h3>Capacités apprises (${escapeHtml(poke.frenchName)})</h3>
         <div class="moves-columns">
             <div class="moves-column">
                 <h4>Naturellement (niveau / éclosion)</h4>
@@ -1509,8 +1714,8 @@ async function loadSpecificities() {
 function specificityCardHtml(poke, subLabel) {
     return `
         <div class="pokemon-card">
-            <img src="${getArtworkUrl(poke)}" alt="${poke.frenchName}">
-            <h3>${poke.frenchName}</h3>
+            <img src="${escapeHtml(getArtworkUrl(poke))}" alt="${escapeHtml(poke.frenchName)}">
+            <h3>${escapeHtml(poke.frenchName)}</h3>
             ${subLabel ? `<p class="types">${subLabel}</p>` : ''}
         </div>
     `;
@@ -1537,19 +1742,19 @@ function renderSpecificities(data) {
     const labelB = formatLocationName(exclusives.versionB);
 
     const listAHtml = exclusives.listA.length
-        ? exclusives.listA.map(p => `<li>${p.frenchName}</li>`).join('')
+        ? exclusives.listA.map(p => `<li>${escapeHtml(p.frenchName)}</li>`).join('')
         : '<li class="moves-empty">Aucun trouvé</li>';
     const listBHtml = exclusives.listB.length
-        ? exclusives.listB.map(p => `<li>${p.frenchName}</li>`).join('')
+        ? exclusives.listB.map(p => `<li>${escapeHtml(p.frenchName)}</li>`).join('')
         : '<li class="moves-empty">Aucun trouvé</li>';
 
     versionExclusivesDisplay.innerHTML = `
         <div class="moves-column">
-            <h4>Exclusifs ${labelA}</h4>
+            <h4>Exclusifs ${escapeHtml(labelA)}</h4>
             <ul class="moves-list">${listAHtml}</ul>
         </div>
         <div class="moves-column">
-            <h4>Exclusifs ${labelB}</h4>
+            <h4>Exclusifs ${escapeHtml(labelB)}</h4>
             <ul class="moves-list">${listBHtml}</ul>
         </div>
     `;
