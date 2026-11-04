@@ -1,0 +1,10 @@
+# Dépendances et fichiers temporaires
+node_modules/
+*.log
+.cache/
+
+# Systèmes et éditeurs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
