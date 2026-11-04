@@ -180,7 +180,7 @@ function updateTeamDisplay() {
     } else {
         teamDisplay.innerHTML = userTeam.map((poke, index) => `
             <div class="team-slot filled">
-                <img src="${escapeHtml(poke.image || '')}" alt="${escapeHtml(poke.name)}">
+                <img src="${escapeHtml(teamImageUrl(poke))}" alt="${escapeHtml(poke.name)}">
                 <h4>${escapeHtml(poke.name)}</h4>
                 <p>#${poke.id}</p>
                 <p class="types">${(poke.types && poke.types.length) ? escapeHtml(poke.types.join(', ')) : 'Type(s) inconnu(s)'}</p>

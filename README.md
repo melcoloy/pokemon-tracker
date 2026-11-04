@@ -8,15 +8,28 @@ Les données (types, stats, talents, capacités, zones, conditions d'évolution)
 
 | Onglet | Contenu |
 |---|---|
-| **Pokédex** | Pokémon du jeu, dans l'ordre du Pokédex régional. Recherche (sans tenir compte des accents), filtres par type et par zone de rencontre. |
-| **Mon Équipe** | Jusqu'à 6 Pokémon, **une équipe par jeu**, sauvegardée dans le navigateur. Pour chaque membre, choix du **talent** et de **4 capacités**. **Analyse de l'équipe** : points faibles partagés (talents compris : Lévitation, Absorb Eau…), types qui les compenseraient, couverture offensive avec les capacités choisies, et tableaux des dégâts subis et infligés par type. |
-| **Calculatrice** | Efficacité d'un type d'attaque contre un ou deux types, avec la table des types de la génération du jeu. |
-| **Générateur** | Équipe aléatoire (sans doublon de type, évolutions finales, sans légendaires). |
+| **Pokédex** | Pokémon du jeu avec leur **numéro du Pokédex régional**. Recherche (sans tenir compte des accents), filtres par type, par zone de rencontre et par statut. **Pokédex vivant** : chaque Pokémon peut être marqué vu ou capturé, avec une barre de progression par jeu. |
+| **Mon Équipe** | Jusqu'à 6 Pokémon, **une équipe par jeu**, sauvegardée dans le navigateur. Pour chaque membre, choix du **talent** et de **4 capacités**. **Analyse de l'équipe** : points faibles partagés (talents compris : Lévitation, Absorb Eau…), types qui les compenseraient, couverture offensive avec les capacités choisies, tableaux des dégâts subis et infligés par type, et **Pokémon du jeu suggérés** pour compléter l'équipe. |
+| **Calculatrice** | Efficacité d'un type d'attaque contre un ou deux types, ou directement contre un Pokémon choisi par son nom, avec le résumé de tous les types d'attaque contre lui. **Table des types complète** de la génération du jeu. |
+| **Générateur** | Équipe aléatoire (sans doublon de type, évolutions finales, sans légendaires), ou **équipe équilibrée** : peu de faiblesses partagées et bonne couverture offensive. |
 | **Évolutions** | Évolutions possibles de ton équipe et chaîne complète de n'importe quel Pokémon, avec les conditions du jeu (objets, lieux, moment de la journée…). |
-| **Statistiques et Capacités** | Radar des stats de base (comparaison de deux Pokémon), talents, et tableaux des capacités (niveau, CT/CS, œuf, donneur) avec type, catégorie, puissance, précision et PP. |
+| **Statistiques et Capacités** | **Description du Pokédex** en français, radar des stats de base (comparaison de deux Pokémon), talents, et tableaux des capacités (niveau, CT/CS, œuf, donneur) avec type, catégorie, puissance, précision, PP et, au choix, leur description. |
 | **Spécificités** | Méga-évolutions, quelques formes spéciales et exclusivités de version. |
 
+Le bouton **✨ Chromatiques** affiche partout les images en version chromatique (shiny).
+
 L'app fonctionne **sans PokéAPI** une fois les fichiers `data/` présents. Elle ne l'appelle qu'en secours, si un fichier manque.
+
+## Hors ligne et installation
+
+Servie en http(s) (serveur local ou GitHub Pages), l'app enregistre un *service worker* (`sw.js`) :
+
+- l'app elle-même (HTML, CSS, JS, Chart.js inclus dans `vendor/`) et les jeux déjà ouverts restent disponibles **sans connexion** ;
+- le bouton **📥 Tout télécharger pour le hors ligne** enregistre les données de tous les jeux (environ 12 Mo) ;
+- les images sont gardées au fur et à mesure qu'elles s'affichent ;
+- l'app peut être **installée** comme une application (menu du navigateur → « Installer », ou « Ajouter à l'écran d'accueil » sur téléphone).
+
+Les fichiers de l'app sont toujours redemandés au réseau d'abord : une mise à jour publiée est visible au chargement suivant. Les données sont servies depuis le cache puis rafraîchies en arrière-plan.
 
 ## Lancer l'app
 
@@ -55,9 +68,33 @@ js/                  Code de l'app, chargé dans cet ordre par index.html :
   main.js            démarrage
 data/                Données générées (voir ci-dessous)
 covers/              Jaquettes des jeux
+vendor/              Chart.js 4.4.0 (licence MIT), servi localement
+sw.js                Service worker (hors ligne)
+manifest.webmanifest, icons/   Installation comme application
+tests/               Tests de bout en bout (Playwright)
 ```
 
 Ce sont des scripts classiques (pas des modules) qui partagent la même portée globale : une fonction définie dans un fichier est utilisable dans les suivants.
+
+## Tests
+
+Les tests ouvrent l'app dans Chromium et vérifient les règles par génération, les données, l'équipe et son analyse, le Pokédex vivant, la calculatrice, la navigation au clavier, le contraste des textes (mode clair et sombre) et le fonctionnement hors ligne. PokéAPI et les images sont coupées pendant les tests : l'app doit marcher avec ses seuls fichiers.
+
+Il faut Node 18+ et Python 3 (pour le serveur local, démarré automatiquement) :
+
+```bash
+npm install
+```
+
+```bash
+npx playwright install chromium
+```
+
+```bash
+npm test
+```
+
+Les tests tournent aussi automatiquement sur GitHub (Actions) à chaque pull request et à chaque mise à jour de `main`.
 
 ## Régénérer les données
 
@@ -78,7 +115,7 @@ Il faut Node 18 ou plus récent. Les fichiers générés sont déjà dans le dé
    ```
 
    Ce script produit :
-   - `data/extra/{jeu}.json` : capacités apprises (avec numéros de CT et valeurs de la génération), zones de rencontre et conditions d'évolution propres au jeu ;
+   - `data/extra/{jeu}.json` : capacités apprises (avec numéros de CT et valeurs de la génération), zones de rencontre, conditions d'évolution, numéros du Pokédex régional et descriptions (Pokémon et capacités) propres au jeu ;
    - `data/names.json` : noms français des capacités, talents, objets, lieux, versions et espèces ;
    - `data/past.json` : anciennes stats et anciens talents.
 
@@ -89,6 +126,7 @@ Les boutons « Exporter… » de l'app téléchargent les données du jeu charg�
 - PokéAPI n'a pas de données de rencontres sauvages pour certains jeux récents (Écarlate/Violet, Légendes Arceus, Diamant Étincelant…) : le filtre par zone et les exclusivités y sont indisponibles.
 - Les exclusivités de version ne tiennent compte que des rencontres sauvages : les Pokémon obtenus autrement (dons, événements) peuvent manquer.
 - La liste des formes spéciales est courte et faite à la main.
+- PokéAPI n'a des descriptions en français qu'à partir de Noir/Blanc : pour les jeux plus anciens, l'app affiche le texte français le plus proche et indique de quel jeu il vient.
 
 ## Crédits
 

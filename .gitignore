@@ -8,3 +8,7 @@ node_modules/
 Thumbs.db
 .vscode/
 .idea/
+
+# Tests Playwright
+test-results/
+playwright-report/

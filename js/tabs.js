@@ -27,14 +27,3 @@ tabBtns.forEach((btn, index) => {
         switchToTab(tabBtns[target].getAttribute('data-tab'), { focus: true });
     });
 });
-
-// === Rend une carte cliquable utilisable au clavier (Entrée / Espace) ===
-function activateOnKeyboard(container, selector) {
-    container.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        const el = e.target.closest(selector);
-        if (!el) return;
-        e.preventDefault();
-        el.click();
-    });
-}
