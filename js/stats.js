@@ -200,7 +200,12 @@ function updateStatsChart() {
 
     statsRadarCanvas.setAttribute('aria-label', `Radar des statistiques de base : ${datasets.map(d => `${d.label} (${d.data.join(', ')})`).join(' ; ')}. Les valeurs sont aussi dans le tableau ci-dessous.`);
 
-    statsChartInstance = new Chart(statsRadarCanvas, {
+    // Chart.js vient d'un CDN : sans connexion, il peut manquer. On saute alors le radar,
+    // le tableau des stats juste en dessous donne les mêmes valeurs.
+    const chartAvailable = typeof Chart !== 'undefined';
+    statsRadarCanvas.parentElement.hidden = !chartAvailable;
+
+    if (chartAvailable) statsChartInstance = new Chart(statsRadarCanvas, {
         type: 'radar',
         data: { labels, datasets },
         options: {

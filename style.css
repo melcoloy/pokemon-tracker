@@ -100,7 +100,7 @@ header h1 {
     border: 2px solid #667eea;
     border-radius: 6px;
     background: white;
-    color: #667eea;
+    color: #4c5fd5;
     font-size: 0.85em;
     font-weight: 600;
     cursor: pointer;
@@ -218,6 +218,11 @@ header h1 {
     gap: 20px;
 }
 
+/* Messages (chargement, liste vide…) sur toute la largeur de la grille */
+.pokemon-list > p {
+    grid-column: 1 / -1;
+}
+
 .pokemon-card {
     background: white;
     border: 2px solid #ddd;
@@ -254,7 +259,7 @@ header h1 {
 }
 
 .national-num {
-    color: #999;
+    color: #6b6b6b;
     font-size: 0.85em;
 }
 
@@ -296,7 +301,7 @@ header h1 {
 }
 
 .remove-btn {
-    background: #e74c3c;
+    background: #c0392b;
     color: white;
     border: none;
     padding: 5px 10px;
@@ -307,7 +312,7 @@ header h1 {
 }
 
 .remove-btn:hover {
-    background: #c0392b;
+    background: #a93226;
 }
 
 /* Générateur d'équipe */
@@ -358,7 +363,7 @@ header h1 {
     border: none;
     border-radius: 6px;
     background: #FFA500;
-    color: white;
+    color: #222;
     font-size: 1em;
     font-weight: 600;
     cursor: pointer;
@@ -426,7 +431,7 @@ header h1 {
 
 .calc-result.effect-super {
     background: #e6f9ed;
-    color: #1e8449;
+    color: #176b3a;
 }
 
 /* Tracker d'évolutions */
@@ -436,7 +441,7 @@ header h1 {
 }
 
 .evolutions-note {
-    color: #b8860b;
+    color: #7a5a00;
     background: #fff8e1;
     border: 1px solid #ffe082;
     border-radius: 6px;
@@ -668,7 +673,7 @@ header h1 {
 }
 
 .move-meta {
-    color: #667eea;
+    color: #4c5fd5;
     font-weight: 600;
     font-size: 0.85em;
     white-space: nowrap;
@@ -719,12 +724,12 @@ header h1 {
 }
 
 .moves-table .move-first {
-    color: #667eea;
+    color: #4c5fd5;
     font-weight: 600;
 }
 
 .muted {
-    color: #888;
+    color: #6b6b6b;
     font-weight: normal;
 }
 
@@ -733,29 +738,30 @@ header h1 {
     display: inline-block;
     padding: 2px 8px;
     border-radius: 10px;
-    color: white;
+    color: #111;
     font-size: 0.85em;
     font-weight: 600;
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
 }
 
+/* Couleurs habituelles des types. Texte foncé par défaut ; blanc sur les fonds foncés
+   (chaque combinaison respecte un contraste d'au moins 4,5:1) */
 .type-normal { background: #9fa19f; }
 .type-fighting { background: #ff8000; }
 .type-flying { background: #81b9ef; }
-.type-poison { background: #9141cb; }
-.type-ground { background: #915121; }
+.type-poison { background: #9141cb; color: white; }
+.type-ground { background: #915121; color: white; }
 .type-rock { background: #afa981; }
 .type-bug { background: #91a119; }
-.type-ghost { background: #704170; }
+.type-ghost { background: #704170; color: white; }
 .type-steel { background: #60a1b8; }
-.type-fire { background: #e62829; }
+.type-fire { background: #e12728; color: white; }
 .type-water { background: #2980ef; }
 .type-grass { background: #3fa129; }
 .type-electric { background: #d9b100; }
 .type-psychic { background: #ef4179; }
 .type-ice { background: #3dcef3; }
-.type-dragon { background: #5060e1; }
-.type-dark { background: #624d4e; }
+.type-dragon { background: #5060e1; color: white; }
+.type-dark { background: #624d4e; color: white; }
 .type-fairy { background: #ef70ef; }
 .type-stellar { background: #40b5a5; }
 
@@ -784,6 +790,25 @@ header h1 {
 
 /* ==================== MODE SOMBRE ==================== */
 
+/* Texte clair par défaut : tout ce qui n'a pas de couleur propre reste lisible */
+html.dark-mode .container {
+    color: #e6e6f0;
+}
+
+html.dark-mode .tab-content h3,
+html.dark-mode .checkbox-label,
+html.dark-mode .team-slot h4,
+html.dark-mode .team-slot p {
+    color: #e6e6f0;
+}
+
+html.dark-mode .team-slot p.types,
+html.dark-mode .national-num,
+html.dark-mode .muted {
+    color: #a8a8c0;
+}
+
+html.dark-mode .move-meta,
 html.dark-mode .moves-table-block h4 {
     color: #eee;
 }
@@ -808,10 +833,6 @@ html.dark-mode .moves-table tbody tr:hover {
 
 html.dark-mode .moves-table .move-first {
     color: #a8b4ff;
-}
-
-html.dark-mode .muted {
-    color: #999;
 }
 
 html.dark-mode .autocomplete-item.active {
@@ -869,10 +890,6 @@ html.dark-mode .pokemon-card p {
     color: #aaa;
 }
 
-html.dark-mode .national-num {
-    color: #888;
-}
-
 html.dark-mode .team-slot {
     background: #2a2a3d;
     border-color: #555;
@@ -881,10 +898,6 @@ html.dark-mode .team-slot {
 html.dark-mode .team-slot.filled {
     background: #2a2a3d;
     border-color: #667eea;
-}
-
-html.dark-mode .team-slot p.types {
-    color: #aaa;
 }
 
 html.dark-mode .calc-intro {
