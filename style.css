@@ -765,6 +765,209 @@ header h1 {
 .type-fairy { background: #ef70ef; }
 .type-stellar { background: #40b5a5; }
 
+/* ==================== POKÉDEX VIVANT ==================== */
+
+.dex-progress {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 10px 0;
+    color: #333;
+    font-size: 0.95em;
+}
+
+.dex-progress label {
+    font-weight: 600;
+}
+
+.dex-progress progress {
+    flex: 1;
+    min-width: 150px;
+    max-width: 400px;
+    height: 14px;
+    accent-color: #2e7d32;
+}
+
+.regional-num {
+    color: #333;
+    font-weight: 600;
+    font-size: 0.9em;
+}
+
+.dex-status {
+    margin-top: 8px;
+    padding: 4px 10px;
+    border-radius: 14px;
+    border: 1px solid #bbb;
+    background: white;
+    color: #555;
+    font-size: 0.85em;
+    cursor: pointer;
+}
+
+.dex-status.dex-seen {
+    border-color: #4c5fd5;
+    color: #3546b0;
+    background: #eef0ff;
+}
+
+.dex-status.dex-caught {
+    border-color: #2e7d32;
+    color: white;
+    background: #2e7d32;
+}
+
+.pokemon-card.dex-card-caught {
+    border-color: #2e7d32;
+}
+
+/* ==================== DESCRIPTIONS ==================== */
+
+.stats-description {
+    max-width: 700px;
+    margin: 10px auto 15px;
+    padding: 10px 15px;
+    border-left: 4px solid #667eea;
+    background: #f7f8ff;
+    color: #333;
+    font-style: italic;
+    line-height: 1.4;
+}
+
+.stats-description .muted {
+    font-style: normal;
+    font-size: 0.85em;
+}
+
+.move-desc {
+    display: none;
+    white-space: normal;
+    max-width: 380px;
+    margin-top: 3px;
+    color: #555;
+    font-size: 0.88em;
+}
+
+.show-descriptions .move-desc {
+    display: block;
+}
+
+.moves-desc-toggle {
+    margin: 5px 0 15px;
+}
+
+/* ==================== CALCULATRICE ==================== */
+
+.calc-pokemon-field {
+    max-width: 400px;
+    margin-bottom: 15px;
+}
+
+.calc-defender-summary {
+    margin-top: 20px;
+}
+
+.calc-defender-summary h3 {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.defender-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.defender-group-label {
+    min-width: 190px;
+    color: #333;
+    font-weight: 600;
+    font-size: 0.92em;
+}
+
+.type-chart-details {
+    margin-top: 25px;
+}
+
+.type-chart-details summary {
+    cursor: pointer;
+    color: #4c5fd5;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.type-chart-table {
+    font-size: 0.8em;
+}
+
+.type-chart-table td.mult {
+    min-width: 34px;
+    padding: 4px;
+}
+
+.type-chart-table thead .type-badge {
+    padding: 2px 4px;
+}
+
+/* ==================== COMPLÉTER L'ÉQUIPE ==================== */
+
+.completion-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    margin: 10px 0 25px;
+}
+
+.completion-card {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 10px;
+    background: #fafafa;
+}
+
+.completion-card img {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.completion-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: #333;
+    font-size: 0.9em;
+}
+
+.completion-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.completion-actions button {
+    white-space: nowrap;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid #4c5fd5;
+    background: white;
+    color: #3546b0;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.completion-actions .completion-add {
+    background: #4c5fd5;
+    color: white;
+}
+
 /* ==================== ANALYSE DE L'ÉQUIPE ==================== */
 
 .team-analysis {
@@ -965,8 +1168,17 @@ header h1 {
     outline-offset: 2px;
 }
 
-.pokemon-card[role="button"] {
+/* Cartes du Pokédex : un bouton pour ouvrir la fiche, un autre pour le statut de capture */
+.card-main {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
     cursor: pointer;
+    text-align: center;
 }
 
 .autocomplete-item.active {
@@ -981,6 +1193,67 @@ header h1 {
 }
 
 /* ==================== MODE SOMBRE ==================== */
+
+/* Pokédex vivant, descriptions, calculatrice, suggestions */
+html.dark-mode .dex-progress,
+html.dark-mode .regional-num,
+html.dark-mode .calc-defender-summary h3,
+html.dark-mode .defender-group-label,
+html.dark-mode .completion-info {
+    color: #e6e6f0;
+}
+
+html.dark-mode .dex-status {
+    background: #1e1e2e;
+    border-color: #666;
+    color: #c0c0d4;
+}
+
+html.dark-mode .dex-status.dex-seen {
+    background: #2a2f55;
+    border-color: #a8b4ff;
+    color: #c9d0ff;
+}
+
+html.dark-mode .dex-status.dex-caught {
+    background: #2e7d32;
+    border-color: #66bb6a;
+    color: white;
+}
+
+html.dark-mode .pokemon-card.dex-card-caught {
+    border-color: #66bb6a;
+}
+
+html.dark-mode .stats-description {
+    background: #2a2a3d;
+    color: #e6e6f0;
+    border-left-color: #a8b4ff;
+}
+
+html.dark-mode .move-desc {
+    color: #c0c0d4;
+}
+
+html.dark-mode .type-chart-details summary {
+    color: #a8b4ff;
+}
+
+html.dark-mode .completion-card {
+    background: #2a2a3d;
+    border-color: #444;
+}
+
+html.dark-mode .completion-actions button {
+    background: #1e1e2e;
+    border-color: #a8b4ff;
+    color: #c9d0ff;
+}
+
+html.dark-mode .completion-actions .completion-add {
+    background: #4c5fd5;
+    color: white;
+}
 
 /* Analyse de l'équipe */
 html.dark-mode .team-analysis h3,

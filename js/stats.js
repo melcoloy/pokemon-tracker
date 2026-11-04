@@ -150,6 +150,7 @@ function updateStatsChart() {
         movesSectionDisplay.innerHTML = '';
         statsAddTeamBtn.style.display = 'none';
         statsTypesDisplay.textContent = '';
+        statsDescription.textContent = '';
         return;
     }
 
@@ -164,6 +165,7 @@ function updateStatsChart() {
         typesText += `  |  Type(s) de ${poke2.frenchName} : ${poke2.frenchTypes.join(', ')}`;
     }
     statsTypesDisplay.textContent = typesText;
+    renderPokemonDescription(poke1);
 
     const statOrder = getStatOrder();
     const labels = statOrder.map(s => statNamesFr[s]);
@@ -293,6 +295,40 @@ async function renderAbilitiesSection(poke) {
     `;
 }
 
+// === Description du Pokédex (texte du jeu, sinon d'un autre jeu en français, avec sa source) ===
+function renderPokemonDescription(poke) {
+    const entry = gameExtra && gameExtra.descriptions && gameExtra.descriptions[poke.speciesName];
+    if (!entry) {
+        statsDescription.textContent = '';
+        statsDescription.hidden = true;
+        return;
+    }
+    const [text, sourceVersion] = entry;
+    statsDescription.hidden = false;
+    statsDescription.innerHTML = `${escapeHtml(text)}${sourceVersion
+        ? ` <span class="muted">(texte de Pokémon ${escapeHtml(versionNameFr(sourceVersion))} : pas de texte en français pour ce jeu dans PokéAPI)</span>`
+        : ''}`;
+}
+
+// === Descriptions des capacités (masquées par défaut, préférence mémorisée) ===
+let showMoveDescriptions = readStorageJson('showMoveDescriptions', false) === true;
+
+function moveDescriptionHtml(moveSlug) {
+    const text = gameExtra && gameExtra.moveDescriptions && gameExtra.moveDescriptions[moveSlug];
+    return text ? `<div class="move-desc">${escapeHtml(text)}</div>` : '';
+}
+
+function applyMoveDescriptionsVisibility() {
+    movesSectionDisplay.classList.toggle('show-descriptions', showMoveDescriptions);
+}
+
+movesSectionDisplay.addEventListener('change', (e) => {
+    if (e.target.id !== 'show-move-descriptions') return;
+    showMoveDescriptions = e.target.checked;
+    writeStorage('showMoveDescriptions', showMoveDescriptions);
+    applyMoveDescriptionsVisibility();
+});
+
 // === Capacités : libellés français ===
 const DAMAGE_CLASS_FR = { physical: 'Physique', special: 'Spéciale', status: 'Statut' };
 
@@ -312,7 +348,7 @@ function moveRowHtml(moveSlug, firstCell) {
     return `
         <tr>
             ${firstCell !== undefined ? `<td class="move-first">${escapeHtml(firstCell)}</td>` : ''}
-            <td>${escapeHtml(moveNameFr(moveSlug))}</td>
+            <td>${escapeHtml(moveNameFr(moveSlug))}${moveDescriptionHtml(moveSlug)}</td>
             <td>${type ? `<span class="type-badge type-${escapeHtml(type)}">${escapeHtml(typeNameFr(type))}</span>` : dash}</td>
             <td>${damageClass ? escapeHtml(DAMAGE_CLASS_FR[damageClass] || damageClass) : dash}</td>
             <td class="num">${power ?? dash}</td>
@@ -388,6 +424,11 @@ function renderMovesSection(poke) {
     movesSectionDisplay.innerHTML = `
         <h3>Capacités apprises (${escapeHtml(poke.frenchName)})</h3>
         ${note}
+        <label class="checkbox-label moves-desc-toggle">
+            <input type="checkbox" id="show-move-descriptions" ${showMoveDescriptions ? 'checked' : ''}>
+            Afficher les descriptions des capacités
+        </label>
         ${LEARN_SECTIONS.map(section => moveTableHtml(section, learnset)).join('')}
     `;
+    applyMoveDescriptionsVisibility();
 }

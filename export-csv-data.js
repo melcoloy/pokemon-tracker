@@ -5,7 +5,8 @@
 //   data/past.json          anciennes stats et anciens talents (pour les jeux plus anciens)
 //   data/names.json         noms français : capacités, talents, objets, lieux, versions, espèces
 //   data/extra/{jeu}.json   pour chaque jeu : capacités apprises (avec détails adaptés à la
-//                           génération et numéros de CT), zones de rencontre, conditions d'évolution
+//                           génération et numéros de CT), zones de rencontre, conditions d'évolution,
+//                           numéros du Pokédex régional, descriptions des Pokémon et des capacités
 //
 // Les fichiers data/{jeu}.json (générés par export-data.js) doivent déjà exister :
 // ce script y lit la liste des Pokémon de chaque jeu.
@@ -305,7 +306,53 @@ function buildGameExtra(game, csv, ids, lookups) {
         });
     });
 
-    return { learnsets, moves, machines, locations, evolutions };
+    // --- Numéros du Pokédex régional (premier Pokédex du jeu qui contient l'espèce) ---
+    const dexIds = csv.pokedex_version_groups.filter(r => r.version_group_id === vg.id).map(r => r.pokedex_id);
+    const dexNames = dexIds.map(id => lookups.pokedexNamesFr[id] || ids.pokedexes[id]);
+    const dexNumbers = {};
+    dexIds.forEach((dexId, dexIndex) => {
+        (lookups.dexNumbersByPokedex[dexId] || []).forEach(([speciesId, number]) => {
+            const species = ids.species[speciesId];
+            if (speciesNames.has(species) && !(species in dexNumbers)) dexNumbers[species] = [dexIndex, number];
+        });
+    });
+
+    // --- Descriptions en français ---
+    // PokéAPI n'a des textes français qu'à partir de Noir/Blanc : pour un jeu plus ancien (ou sans texte),
+    // on prend le texte français le plus proche, en indiquant de quel jeu il vient.
+    const versionOrder = v => (lookups.versionGroupsById[ids.versionGroupOfVersion[v]] || {}).order || 0;
+    const pickText = (entries, isSameGame, orderOf) => {
+        if (!entries || entries.length === 0) return null;
+        const own = entries.find(isSameGame);
+        if (own) return { text: own.text };
+        const after = entries.filter(e => orderOf(e) >= vg.order).sort((a, b) => orderOf(a) - orderOf(b));
+        const before = entries.filter(e => orderOf(e) < vg.order).sort((a, b) => orderOf(b) - orderOf(a));
+        return (after[0] || before[0]) || null;
+    };
+
+    const descriptions = {};
+    speciesNames.forEach(species => {
+        const entries = lookups.speciesFlavorFr[species];
+        const picked = pickText(entries, e => versionIds.has(e.versionId), e => versionOrder(e.versionId));
+        if (!picked) return;
+        descriptions[species] = picked.versionId && !versionIds.has(picked.versionId)
+            ? [picked.text, ids.versions[picked.versionId]]
+            : [picked.text];
+    });
+
+    const moveDescriptions = {};
+    usedMoves.forEach(move => {
+        const entries = lookups.moveFlavorFr[move];
+        const picked = pickText(entries, e => e.versionGroupId === vg.id, e => (lookups.versionGroupsById[e.versionGroupId] || {}).order || 0);
+        if (picked) moveDescriptions[move] = picked.text;
+    });
+
+    return { learnsets, moves, machines, locations, evolutions, dexNames, dexNumbers, descriptions, moveDescriptions };
+}
+
+// Nettoie un texte de description (retours à la ligne et sauts de page des jeux)
+function cleanFlavorText(text) {
+    return text.replace(/[\f\n\r\u00ad]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 // ---------------------------------------------------------------------------
@@ -319,7 +366,9 @@ const CSV_FILES = [
     'pokemon_moves', 'pokemon_move_methods',
     'versions', 'version_names', 'version_groups', 'version_group_regions',
     'encounters', 'location_areas', 'locations', 'location_names',
-    'pokemon_evolution', 'evolution_triggers', 'genders'
+    'pokemon_evolution', 'evolution_triggers', 'genders',
+    'pokemon_dex_numbers', 'pokedexes', 'pokedex_version_groups', 'pokedex_prose',
+    'pokemon_species_flavor_text', 'move_flavor_text'
 ];
 
 async function main() {
@@ -345,7 +394,9 @@ async function main() {
         versions: idMap(csv.versions),
         locations: idMap(csv.locations),
         evolutionTriggers: idMap(csv.evolution_triggers),
-        genders: idMap(csv.genders)
+        genders: idMap(csv.genders),
+        pokedexes: idMap(csv.pokedexes),
+        versionGroupOfVersion: idMap(csv.versions, 'version_group_id')
     };
 
     const versionGroupsById = {};
@@ -376,8 +427,28 @@ async function main() {
         movesByIdentifier: Object.fromEntries(csv.moves.map(r => [r.identifier, r])),
         versionIdsByName: Object.fromEntries(csv.versions.map(r => [r.identifier, r.id])),
         locationIdByArea: Object.fromEntries(csv.location_areas.map(r => [r.id, r.location_id])),
-        regionIdByLocation: Object.fromEntries(csv.locations.map(r => [r.id, r.region_id]))
+        regionIdByLocation: Object.fromEntries(csv.locations.map(r => [r.id, r.region_id])),
+        pokedexNamesFr: Object.fromEntries(csv.pokedex_prose.filter(r => r.local_language_id === FRENCH).map(r => [r.pokedex_id, r.name])),
+        dexNumbersByPokedex: {},
+        speciesFlavorFr: {},
+        moveFlavorFr: {}
     };
+    csv.pokemon_dex_numbers.forEach(r => {
+        (lookups.dexNumbersByPokedex[r.pokedex_id] = lookups.dexNumbersByPokedex[r.pokedex_id] || [])
+            .push([r.species_id, Number(r.pokedex_number)]);
+    });
+    csv.pokemon_species_flavor_text.forEach(r => {
+        if (r.language_id !== FRENCH) return;
+        const species = ids.species[r.species_id];
+        (lookups.speciesFlavorFr[species] = lookups.speciesFlavorFr[species] || [])
+            .push({ versionId: r.version_id, text: cleanFlavorText(r.flavor_text) });
+    });
+    csv.move_flavor_text.forEach(r => {
+        if (r.language_id !== FRENCH) return;
+        const move = ids.moves[r.move_id];
+        (lookups.moveFlavorFr[move] = lookups.moveFlavorFr[move] || [])
+            .push({ versionGroupId: r.version_group_id, text: cleanFlavorText(r.flavor_text) });
+    });
 
     fs.writeFileSync(path.join(DATA_DIR, 'past.json'), JSON.stringify(buildPast(csv, ids)));
     console.log('OK : data/past.json');

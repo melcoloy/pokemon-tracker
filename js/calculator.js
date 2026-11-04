@@ -78,6 +78,9 @@ function refreshCalculatorForGame() {
 
     calcGenNote.textContent = `Table des types de la génération ${generation}.`;
     renderTeamAnalysis();
+    populateCalcPokemonList();
+    renderTypeChartTable();
+    renderDefenderSummary();
     calcResult.textContent = '';
     calcResult.className = 'calc-result';
 }
@@ -131,3 +134,95 @@ function calculateEffectiveness() {
 }
 
 calculateBtn.addEventListener('click', calculateEffectiveness);
+
+// === Défenseur choisi par son nom : remplit ses types (ceux de la génération du jeu) ===
+function populateCalcPokemonList() {
+    calcPokemonList.innerHTML = allPokemon
+        .map(p => `<option value="${escapeHtml(p.frenchName)}"></option>`)
+        .join('');
+    calcPokemonInput.value = '';
+}
+
+function findPokemonByFrenchName(name) {
+    const q = normalizeSearch(name);
+    return q ? allPokemon.find(p => normalizeSearch(p.frenchName) === q) : null;
+}
+
+calcPokemonInput.addEventListener('input', () => {
+    const poke = findPokemonByFrenchName(calcPokemonInput.value);
+    if (!poke) return;
+    const [type1, type2] = poke.types.map(t => t.type.name);
+    defType1Select.value = type1 || '';
+    defType2Select.value = type2 || '';
+    renderDefenderSummary(poke);
+    if (atkTypeSelect.value) calculateEffectiveness();
+});
+
+// Choisir des types à la main "oublie" le Pokémon choisi
+[defType1Select, defType2Select].forEach(select => select.addEventListener('change', () => {
+    calcPokemonInput.value = '';
+    renderDefenderSummary();
+}));
+
+// === Résumé : tous les types d'attaque contre le défenseur choisi, regroupés par efficacité ===
+function renderDefenderSummary(poke) {
+    const defTypes = [defType1Select.value, defType2Select.value].filter((t, i, arr) => t && arr.indexOf(t) === i);
+    if (defTypes.length === 0 || Object.keys(currentTypeChart).length === 0) {
+        calcDefenderSummary.innerHTML = '';
+        return;
+    }
+
+    const groups = [
+        { test: m => m >= 4, label: 'Très efficace (×4)' },
+        { test: m => m >= 2 && m < 4, label: 'Super efficace (×2)' },
+        { test: m => m === 1, label: 'Efficacité normale (×1)' },
+        { test: m => m === 0.5, label: 'Pas très efficace (×½)' },
+        { test: m => m > 0 && m < 0.5, label: 'Très peu efficace (×¼)' },
+        { test: m => m === 0, label: 'Aucun effet (×0)' }
+    ];
+    const atkTypes = getAnalysisTypes();
+    const rows = groups.map(g => {
+        const matching = atkTypes.filter(atk => g.test(getDefensiveMultiplier(atk, defTypes, null)));
+        return matching.length
+            ? `<div class="defender-group"><span class="defender-group-label">${g.label}</span>${typeBadgeList(matching, '')}</div>`
+            : '';
+    }).join('');
+
+    const title = poke
+        ? `Contre ${escapeHtml(poke.frenchName)} (${escapeHtml(defTypes.map(typeNameFr).join(' / '))})`
+        : `Contre un Pokémon ${escapeHtml(defTypes.map(typeNameFr).join(' / '))}`;
+    calcDefenderSummary.innerHTML = `
+        <h3>${title}</h3>
+        ${rows}
+        ${poke ? '<p class="calc-intro">Calcul sur les types seulement : le talent (Lévitation…) n\'est pas pris en compte ici, mais il l\'est dans l\'analyse de l\'équipe.</p>' : ''}
+    `;
+}
+
+// === Table des types complète de la génération (attaque en ligne, défense en colonne) ===
+function renderTypeChartTable() {
+    const types = getAnalysisTypes();
+    const short = t => typeNameFr(t).slice(0, 4);
+    typeChartTable.innerHTML = `
+        <table class="analysis-table type-chart-table">
+            <caption class="visually-hidden">Multiplicateur de chaque type d'attaque (lignes) contre chaque type de défenseur (colonnes)</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Attaque ↓ / Défense →</th>
+                    ${types.map(t => `<th scope="col" title="${escapeHtml(typeNameFr(t))}"><span class="type-badge type-${escapeHtml(t)}">${escapeHtml(short(t))}</span></th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>
+                ${types.map(atk => `
+                    <tr>
+                        <th scope="row">${typeBadgeHtml(atk)}</th>
+                        ${types.map(def => {
+                            const m = getMultiplier(atk, def);
+                            const cls = m > 1 ? 'eff-good' : m === 0 ? 'mult-immune' : m < 1 ? 'eff-bad' : 'mult-neutral';
+                            return `<td class="mult ${cls}" title="${escapeHtml(`${typeNameFr(atk)} contre ${typeNameFr(def)}`)}">${formatMultiplier(m)}</td>`;
+                        }).join('')}
+                    </tr>`).join('')}
+            </tbody>
+        </table>
+        <p class="calc-intro analysis-legend">Vert : super efficace (×2) · rouge : pas très efficace (×½) · ×0 : aucun effet · case vide : normal.</p>
+    `;
+}

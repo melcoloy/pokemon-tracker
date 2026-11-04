@@ -302,7 +302,7 @@ function afterGameLoaded() {
     locationFilter.innerHTML = '<option value="">Toutes les zones</option>';
     populateLocationFilter(currentRegionName, gameSelect.value);
 
-    displayPokemon(allPokemon);
+    applyFilters(); // garde le filtre par statut choisi
     refreshCalculatorForGame();
 
     evolutionSearchInput.value = '';
@@ -323,6 +323,7 @@ function afterGameLoaded() {
     movesSectionDisplay.innerHTML = '';
     statsAddTeamBtn.style.display = 'none';
     statsTypesDisplay.textContent = '';
+    statsDescription.textContent = '';
 
     megaListDisplay.innerHTML = '<p>Ouvre cet onglet pour charger les spécificités de ce jeu.</p>';
     specialFormsListDisplay.innerHTML = '';
@@ -334,19 +335,19 @@ function afterGameLoaded() {
     exportGameBtn.style.display = allPokemon.length > 0 ? 'inline-block' : 'none';
 }
 
-// === Affiche la jaquette du jeu sélectionné si elle existe dans covers/ (tente .png puis .jpg) ===
+// === Affiche la jaquette du jeu sélectionné si elle existe dans covers/ (tente .jpg puis .png) ===
 function updateGameCover(versionSlug) {
     gameCoverImg.onload = () => { gameCoverImg.style.display = 'inline-block'; };
     gameCoverImg.onerror = () => {
-        if (gameCoverImg.dataset.triedJpg !== '1') {
-            gameCoverImg.dataset.triedJpg = '1';
-            gameCoverImg.src = `covers/${versionSlug}.jpg`;
+        if (gameCoverImg.dataset.triedPng !== '1') {
+            gameCoverImg.dataset.triedPng = '1';
+            gameCoverImg.src = `covers/${versionSlug}.png`;
         } else {
             gameCoverImg.style.display = 'none';
         }
     };
-    gameCoverImg.dataset.triedJpg = '0';
-    gameCoverImg.src = `covers/${versionSlug}.png`;
+    gameCoverImg.dataset.triedPng = '0';
+    gameCoverImg.src = `covers/${versionSlug}.jpg`;
 }
 
 gameSelect.addEventListener('change', () => {

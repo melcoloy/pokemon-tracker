@@ -137,6 +137,45 @@ function computeTeamAnalysis(members) {
     return { types, defense, threats, attackers, offense, covered, notCovered, suggestions };
 }
 
+// === Membre "virtuel" pour l'analyse à partir d'un Pokémon du jeu (talent par défaut, sans capacités) ===
+function memberFromPoke(poke) {
+    return {
+        name: poke.frenchName,
+        types: poke.types.map(t => t.type.name),
+        ability: getEffectiveAbility({}, poke),
+        moves: []
+    };
+}
+
+// Somme des stats de base (départage les candidats)
+function baseStatTotal(poke) {
+    return (poke.stats || []).reduce((sum, s) => sum + (s.base_stat || 0), 0);
+}
+
+// === Intérêt d'un Pokémon pour une équipe donnée ===
+// + résiste aux points faibles de l'équipe, + couvre des types non couverts (STAB),
+// - est lui-même faible aux points faibles. Les stats de base départagent.
+function scoreCandidateForTeam(poke, analysis) {
+    const candidate = memberFromPoke(poke);
+    const threatTypes = analysis.threats.map(t => t.atkType);
+    const resists = threatTypes.filter(atk => getDefensiveMultiplier(atk, candidate.types, candidate.ability) < 1);
+    const weakTo = threatTypes.filter(atk => getDefensiveMultiplier(atk, candidate.types, candidate.ability) > 1);
+    const covers = analysis.notCovered.filter(def => candidate.types.some(atk => getMultiplier(atk, def) > 1));
+    const score = resists.length * 3 - weakTo.length * 3 + covers.length * 1.5
+        + baseStatTotal(poke) / 200 - (poke.isFinal === false ? 1 : 0);
+    return { poke, score, resists, weakTo, covers };
+}
+
+// === Meilleurs Pokémon du jeu pour compléter l'équipe (hors légendaires et membres actuels) ===
+function getTeamCompletionSuggestions(analysis, teamSpecies, limit = 6) {
+    return allPokemon
+        .filter(p => !teamSpecies.has(p.speciesName) && !p.isLegendary)
+        .map(p => scoreCandidateForTeam(p, analysis))
+        .filter(c => c.resists.length + c.covers.length > 0 && c.weakTo.length === 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limit);
+}
+
 function abilityNameFr(ability) {
     return frNames.abilities[ability] || formatLocationName(ability);
 }
@@ -166,7 +205,34 @@ function renderTeamAnalysis() {
         return;
     }
 
-    const { defense, threats, attackers, offense, covered, notCovered, suggestions, types } = computeTeamAnalysis(members);
+    const analysis = computeTeamAnalysis(members);
+    const { defense, threats, attackers, offense, covered, notCovered, suggestions, types } = analysis;
+
+    // Vrais Pokémon du jeu pour compléter l'équipe
+    const teamSpecies = new Set(userTeam.map(findTeamMonInGame).filter(Boolean).map(p => p.speciesName));
+    const completions = userTeam.length < TEAM_SIZE_MAX ? getTeamCompletionSuggestions(analysis, teamSpecies) : [];
+    const completionHtml = userTeam.length >= TEAM_SIZE_MAX ? '' : `
+        <h4 class="analysis-table-title">🧩 Pokémon pour compléter l'équipe</h4>
+        ${completions.length ? `
+            <p class="calc-intro">Pokémon de ce jeu qui résistent aux points faibles de l'équipe ou couvrent des types non couverts, sans ajouter de faiblesse partagée (légendaires exclus).</p>
+            <div class="completion-list">
+                ${completions.map(c => `
+                    <div class="completion-card">
+                        <img src="${escapeHtml(getArtworkUrl(c.poke))}" alt="" loading="lazy">
+                        <div class="completion-info">
+                            <strong>${escapeHtml(c.poke.frenchName)}</strong>
+                            <div class="analysis-badges">${c.poke.types.map(t => typeBadgeHtml(t.type.name)).join(' ')}</div>
+                            ${c.resists.length ? `<p>Résiste à : ${escapeHtml(c.resists.map(typeNameFr).join(', '))}</p>` : ''}
+                            ${c.covers.length ? `<p>Couvre : ${escapeHtml(c.covers.map(typeNameFr).join(', '))}</p>` : ''}
+                            <div class="completion-actions">
+                                <button type="button" class="completion-add" data-id="${c.poke.id}">+ Ajouter</button>
+                                <button type="button" class="completion-view" data-id="${c.poke.id}">Voir la fiche</button>
+                            </div>
+                        </div>
+                    </div>`).join('')}
+            </div>`
+        : '<p class="evolutions-empty">Aucune suggestion : l\'équipe n\'a pas de point faible ou de type non couvert qu\'un autre Pokémon du jeu compenserait.</p>'}
+    `;
 
     const threatItems = threats.map(t => `
         <li>${typeBadgeHtml(t.atkType)}
@@ -247,6 +313,8 @@ function renderTeamAnalysis() {
             </section>
         </div>
 
+        ${completionHtml}
+
         <h4 class="analysis-table-title">Dégâts subis par type d'attaque</h4>
         <div class="table-scroll">
             <table class="analysis-table">
@@ -281,3 +349,15 @@ function renderTeamAnalysis() {
         <p class="calc-intro analysis-legend">Vert : super efficace · rouge : pas très efficace · ×0 : aucun effet · case vide : efficacité normale.</p>
     `;
 }
+
+// === Boutons des suggestions : ajouter à l'équipe ou ouvrir la fiche ===
+teamAnalysisDisplay.addEventListener('click', (e) => {
+    const add = e.target.closest('.completion-add[data-id]');
+    const view = e.target.closest('.completion-view[data-id]');
+    const btn = add || view;
+    if (!btn) return;
+    const poke = allPokemon.find(p => p.id === Number(btn.dataset.id));
+    if (!poke) return;
+    if (add) addToTeam(poke);
+    else selectPokemonInStats(poke.id);
+});

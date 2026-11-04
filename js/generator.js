@@ -30,6 +30,13 @@ function generateTeam() {
     }
 
     const shuffled = shuffleArray(pool);
+
+    if (balancedTeam.checked && Object.keys(currentTypeChart).length) {
+        currentGeneratedTeam = generateBalancedTeam(shuffled, avoidDuplicates);
+        displayGeneratedTeam(currentGeneratedTeam);
+        return;
+    }
+
     const team = [];
     const usedTypes = new Set();
 
@@ -58,6 +65,34 @@ function generateTeam() {
 
     currentGeneratedTeam = team;
     displayGeneratedTeam(team);
+}
+
+// === Équipe équilibrée : chaque nouveau membre est choisi parmi les meilleurs candidats ===
+// (ceux qui résistent aux faiblesses de l'équipe en cours et couvrent ses types non couverts),
+// avec une part de hasard pour varier les équipes.
+function generateBalancedTeam(shuffledPool, avoidDuplicates) {
+    const team = [shuffledPool[0]];
+    const typesOf = p => p.types.map(t => t.type.name);
+
+    while (team.length < TEAM_SIZE_MAX) {
+        const usedSpecies = new Set(team.map(p => p.speciesName));
+        const usedTypes = new Set(team.flatMap(typesOf));
+        let candidates = shuffledPool.filter(p => !usedSpecies.has(p.speciesName));
+        if (candidates.length === 0) break;
+        if (avoidDuplicates) {
+            const withoutDuplicates = candidates.filter(p => !typesOf(p).some(t => usedTypes.has(t)));
+            if (withoutDuplicates.length) candidates = withoutDuplicates;
+        }
+
+        const analysis = computeTeamAnalysis(team.map(memberFromPoke));
+        const ranked = candidates
+            .slice(0, 200) // échantillon aléatoire : suffisant et rapide
+            .map(p => scoreCandidateForTeam(p, analysis))
+            .sort((a, b) => b.score - a.score);
+        const top = ranked.slice(0, 5);
+        team.push(top[Math.floor(Math.random() * top.length)].poke);
+    }
+    return team;
 }
 
 function displayGeneratedTeam(team) {

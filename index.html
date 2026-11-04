@@ -6,6 +6,9 @@
     <title>Pokémon Tracker</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/216.png">
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#667eea">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
     <script>
         // Applique le mode sombre AVANT l'affichage (évite un flash en mode clair).
         // Choix enregistré en priorité, sinon réglage du système.
@@ -78,6 +81,9 @@
             <button id="export-game-btn" class="export-btn" style="display: none;">💾 Exporter les données de ce jeu</button>
             <button id="export-types-btn" class="export-btn">💾 Exporter la table des types</button>
             <button id="theme-toggle-btn" class="export-btn" aria-pressed="false">🌙 Mode sombre</button>
+            <button id="shiny-toggle-btn" class="export-btn" aria-pressed="false">✨ Chromatiques : non</button>
+            <button id="offline-btn" class="export-btn" hidden>📥 Tout télécharger pour le hors ligne</button>
+            <span id="offline-status" class="game-loading-indicator" role="status" aria-live="polite"></span>
         </div>
 
         <nav class="tabs" role="tablist" aria-label="Sections de l'app">
@@ -101,10 +107,22 @@
                 <select id="location-filter" class="type-select" aria-label="Filtrer par zone">
                     <option value="">Toutes les zones</option>
                 </select>
+                <select id="dex-status-filter" class="type-select" aria-label="Filtrer par statut de capture">
+                    <option value="">Tous les statuts</option>
+                    <option value="not-caught">Pas encore capturés</option>
+                    <option value="caught">Capturés</option>
+                    <option value="seen">Vus (pas capturés)</option>
+                    <option value="none">Pas vus</option>
+                </select>
                 <span id="location-loading-indicator" class="game-loading-indicator" role="status" aria-live="polite"></span>
             </div>
+            <div class="dex-progress">
+                <label for="dex-progress-bar">Pokédex vivant</label>
+                <progress id="dex-progress-bar" value="0" max="1"></progress>
+                <span id="dex-progress-text"></span>
+            </div>
             <p id="pokedex-count" class="calc-intro" role="status" aria-live="polite"></p>
-            <p class="calc-intro">Clique sur un Pokémon (ou sélectionne-le avec Tab puis Entrée) pour voir ses statistiques et capacités.</p>
+            <p class="calc-intro">Clique sur un Pokémon pour voir ses statistiques et capacités. Le bouton sous chaque carte indique s'il est vu ou capturé dans ta partie (un clic passe au statut suivant).</p>
             <div id="pokedex-list" class="pokemon-list">
                 <p>Chargement...</p>
             </div>
@@ -125,6 +143,11 @@
             <h2>Calculatrice de Combat</h2>
             <p class="calc-intro">Choisis le type de l'attaque et le(s) type(s) du Pokémon défenseur pour connaître l'efficacité.</p>
             <p id="calc-gen-note" class="calc-intro"></p>
+            <div class="calc-field calc-pokemon-field">
+                <label for="calc-pokemon-input">Choisir directement un Pokémon défenseur (optionnel)</label>
+                <input type="text" id="calc-pokemon-input" class="search-input" list="calc-pokemon-list" autocomplete="off" placeholder="Nom du Pokémon...">
+                <datalist id="calc-pokemon-list"></datalist>
+            </div>
             <div class="calc-form">
                 <div class="calc-field">
                     <label for="atk-type-select">Type de l'attaque</label>
@@ -147,6 +170,11 @@
                 <button id="calculate-btn" class="generate-btn">Calculer</button>
             </div>
             <div id="calc-result" class="calc-result" role="status" aria-live="polite"></div>
+            <div id="calc-defender-summary" class="calc-defender-summary"></div>
+            <details class="type-chart-details">
+                <summary>Table des types complète</summary>
+                <div id="type-chart-table" class="table-scroll"></div>
+            </details>
         </div>
 
         <!-- Onglet Générateur -->
@@ -164,6 +192,10 @@
                 <label class="checkbox-label">
                     <input type="checkbox" id="exclude-legendary">
                     Exclure les légendaires
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="balanced-team">
+                    Équipe équilibrée (peu de faiblesses partagées, bonne couverture)
                 </label>
                 <button id="generate-btn" class="generate-btn">🎲 Générer une équipe</button>
             </div>
@@ -207,6 +239,7 @@
                 </div>
             </div>
             <div id="stats-types-display" class="stats-types-line"></div>
+            <p id="stats-description" class="stats-description"></p>
             <button id="stats-add-team-btn" class="generate-btn stats-add-btn" style="display: none;">Ajouter Pokémon 1 à "Mon Équipe"</button>
             <div class="stats-chart-wrapper">
                 <canvas id="stats-radar-chart" role="img" aria-label="Radar des statistiques de base"></canvas>
@@ -240,7 +273,7 @@
         </footer>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="vendor/chart.umd.js"></script>
     <script src="js/dom.js"></script>
     <script src="js/state.js"></script>
     <script src="js/utils.js"></script>
