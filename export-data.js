@@ -25,6 +25,13 @@ const ALL_GAMES = [
 
 const REGION_FORM_LABELS_FR = { alola: 'Alola', galar: 'Galar', hisui: 'Hisui', paldea: 'Paldea' };
 
+// "(Forme d'Alola)" / "(Forme de Galar)" : élision devant une voyelle
+function regionalFormSuffix(regionName) {
+    const label = REGION_FORM_LABELS_FR[regionName] || regionName;
+    const preposition = /^[aeiouyéèêàâîôûh]/i.test(label) ? 'd\'' : 'de ';
+    return `(Forme ${preposition}${label})`;
+}
+
 const typeTranslations = {};
 const typeChart = {};
 const rawChainCache = new Map(); // url -> chaîne d'évolution brute, partagée entre tous les jeux pour éviter de refetch
@@ -182,7 +189,7 @@ async function exportGame(versionSlug) {
         const frenchTypes = await Promise.all(pokeData.types.map(t => getFrenchType(t.type.url, t.type.name)));
 
         const frenchName = isRegionalForm
-            ? `${frenchNameBase} (Forme de ${REGION_FORM_LABELS_FR[regionName] || regionName})`
+            ? `${frenchNameBase} ${regionalFormSuffix(regionName)}`
             : frenchNameBase;
 
         // Ne garde que les capacités apprenables dans CE jeu (allège fortement le fichier)
