@@ -6,14 +6,25 @@
     <title>Pokémon Tracker</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/216.png">
     <link rel="stylesheet" href="style.css">
+    <script>
+        // Applique le mode sombre AVANT l'affichage (évite un flash en mode clair).
+        // Choix enregistré en priorité, sinon réglage du système.
+        try {
+            var savedTheme = JSON.parse(localStorage.getItem('darkMode'));
+            var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (String(savedTheme) === '1' || (savedTheme === null && prefersDark)) {
+                document.documentElement.classList.add('dark-mode');
+            }
+        } catch (e) { /* stockage bloqué ou ancienne valeur : thème par défaut */ }
+    </script>
 </head>
 <body>
     <div class="container">
         <header>
             <div class="header-content">
-                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/216.png" alt="Teddiursa" class="header-mascot">
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/216.png" alt="" class="header-mascot">
                 <h1>Pokémon Tracker</h1>
-                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/216.png" alt="Teddiursa" class="header-mascot">
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/216.png" alt="" class="header-mascot">
             </div>
         </header>
 
@@ -63,51 +74,53 @@
                     <option value="scarlet">Écarlate / Violet</option>
                 </optgroup>
             </select>
-            <span id="game-loading-indicator" class="game-loading-indicator"></span>
+            <span id="game-loading-indicator" class="game-loading-indicator" role="status" aria-live="polite"></span>
             <button id="export-game-btn" class="export-btn" style="display: none;">💾 Exporter les données de ce jeu</button>
             <button id="export-types-btn" class="export-btn">💾 Exporter la table des types</button>
-            <button id="theme-toggle-btn" class="export-btn">🌙 Mode sombre</button>
+            <button id="theme-toggle-btn" class="export-btn" aria-pressed="false">🌙 Mode sombre</button>
         </div>
 
-        <nav class="tabs">
-            <button class="tab-btn active" data-tab="pokedex">Pokédex</button>
-            <button class="tab-btn" data-tab="mon-equipe">Mon Équipe</button>
-            <button class="tab-btn" data-tab="calculatrice">Calculatrice</button>
-            <button class="tab-btn" data-tab="generateur">Générateur</button>
-            <button class="tab-btn" data-tab="evolutions">Évolutions</button>
-            <button class="tab-btn" data-tab="specificities">Spécificités</button>
-            <button class="tab-btn" data-tab="stats">Statistiques et Capacités</button>
+        <nav class="tabs" role="tablist" aria-label="Sections de l'app">
+            <button class="tab-btn active" data-tab="pokedex" role="tab" id="tab-pokedex" aria-controls="pokedex" aria-selected="true" tabindex="0">Pokédex</button>
+            <button class="tab-btn" data-tab="mon-equipe" role="tab" id="tab-mon-equipe" aria-controls="mon-equipe" aria-selected="false" tabindex="-1">Mon Équipe</button>
+            <button class="tab-btn" data-tab="calculatrice" role="tab" id="tab-calculatrice" aria-controls="calculatrice" aria-selected="false" tabindex="-1">Calculatrice</button>
+            <button class="tab-btn" data-tab="generateur" role="tab" id="tab-generateur" aria-controls="generateur" aria-selected="false" tabindex="-1">Générateur</button>
+            <button class="tab-btn" data-tab="evolutions" role="tab" id="tab-evolutions" aria-controls="evolutions" aria-selected="false" tabindex="-1">Évolutions</button>
+            <button class="tab-btn" data-tab="specificities" role="tab" id="tab-specificities" aria-controls="specificities" aria-selected="false" tabindex="-1">Spécificités</button>
+            <button class="tab-btn" data-tab="stats" role="tab" id="tab-stats" aria-controls="stats" aria-selected="false" tabindex="-1">Statistiques et Capacités</button>
         </nav>
 
         <!-- Onglet Pokédex -->
-        <div id="pokedex" class="tab-content active">
+        <div id="pokedex" class="tab-content active" role="tabpanel" aria-labelledby="tab-pokedex">
             <h2>Pokédex</h2>
             <div class="filters">
-                <input type="text" id="search" placeholder="Chercher un Pokémon..." class="search-input">
-                <select id="type-filter" class="type-select">
+                <input type="search" id="search" placeholder="Chercher un Pokémon..." class="search-input" aria-label="Chercher un Pokémon par nom ou numéro">
+                <select id="type-filter" class="type-select" aria-label="Filtrer par type">
                     <option value="">Tous les types</option>
                 </select>
-                <select id="location-filter" class="type-select">
+                <select id="location-filter" class="type-select" aria-label="Filtrer par zone">
                     <option value="">Toutes les zones</option>
                 </select>
-                <span id="location-loading-indicator" class="game-loading-indicator"></span>
+                <span id="location-loading-indicator" class="game-loading-indicator" role="status" aria-live="polite"></span>
             </div>
-            <p class="calc-intro">Clique sur un Pokémon pour voir ses statistiques et capacités.</p>
+            <p id="pokedex-count" class="calc-intro" role="status" aria-live="polite"></p>
+            <p class="calc-intro">Clique sur un Pokémon (ou sélectionne-le avec Tab puis Entrée) pour voir ses statistiques et capacités.</p>
             <div id="pokedex-list" class="pokemon-list">
                 <p>Chargement...</p>
             </div>
         </div>
 
         <!-- Onglet Mon Équipe -->
-        <div id="mon-equipe" class="tab-content">
+        <div id="mon-equipe" class="tab-content" role="tabpanel" aria-labelledby="tab-mon-equipe">
             <h2>Mon Équipe</h2>
+            <p id="team-game-label" class="calc-intro"></p>
             <div id="team-display" class="team-container">
                 <p>Aucun Pokémon ajouté</p>
             </div>
         </div>
 
         <!-- Onglet Calculatrice -->
-        <div id="calculatrice" class="tab-content">
+        <div id="calculatrice" class="tab-content" role="tabpanel" aria-labelledby="tab-calculatrice">
             <h2>Calculatrice de Combat</h2>
             <p class="calc-intro">Choisis le type de l'attaque et le(s) type(s) du Pokémon défenseur pour connaître l'efficacité.</p>
             <p id="calc-gen-note" class="calc-intro"></p>
@@ -132,11 +145,11 @@
                 </div>
                 <button id="calculate-btn" class="generate-btn">Calculer</button>
             </div>
-            <div id="calc-result" class="calc-result"></div>
+            <div id="calc-result" class="calc-result" role="status" aria-live="polite"></div>
         </div>
 
         <!-- Onglet Générateur -->
-        <div id="generateur" class="tab-content">
+        <div id="generateur" class="tab-content" role="tabpanel" aria-labelledby="tab-generateur">
             <h2>Générateur d'Équipe</h2>
             <div class="generator-controls">
                 <label class="checkbox-label">
@@ -160,9 +173,9 @@
         </div>
 
         <!-- Onglet Évolutions -->
-        <div id="evolutions" class="tab-content">
+        <div id="evolutions" class="tab-content" role="tabpanel" aria-labelledby="tab-evolutions">
             <h2>Tracker d'Évolutions</h2>
-            <p class="evolutions-note">⚠️ Les conditions affichées sont celles renseignées par l'API pour le jeu sélectionné quand disponible ; en cas de doute, elles correspondent aux conditions générales de la génération.</p>
+            <p class="evolutions-note">⚠️ Les conditions affichées sont celles que PokéAPI renseigne pour le jeu sélectionné (y compris les lieux spéciaux de la région) ; quelques cas particuliers peuvent rester approximatifs.</p>
 
             <h3>Ton équipe</h3>
             <p class="calc-intro">Pokémon de ton équipe qui peuvent encore évoluer, avec la méthode requise.</p>
@@ -172,30 +185,30 @@
 
             <h3>Rechercher un Pokémon</h3>
             <p class="calc-intro">Consulte la chaîne d'évolution complète de n'importe quel Pokémon du jeu sélectionné.</p>
-            <input type="text" id="evolution-search" class="search-input" placeholder="Nom ou numéro du Pokémon...">
+            <input type="search" id="evolution-search" class="search-input" placeholder="Nom ou numéro du Pokémon..." aria-label="Rechercher la chaîne d'évolution d'un Pokémon">
             <div id="evolution-search-result" class="evolutions-list"></div>
         </div>
 
         <!-- Onglet Statistiques et Capacités -->
-        <div id="stats" class="tab-content">
+        <div id="stats" class="tab-content" role="tabpanel" aria-labelledby="tab-stats">
             <h2>Statistiques et Capacités</h2>
             <p class="calc-intro">Compare les statistiques de base de deux Pokémon, et consulte les talents et capacités du premier.</p>
             <div class="calc-form">
                 <div class="calc-field autocomplete-field">
                     <label for="stats-poke1-input">Pokémon 1</label>
-                    <input type="text" id="stats-poke1-input" class="search-input" placeholder="Chercher un Pokémon...">
+                    <input type="text" id="stats-poke1-input" class="search-input" placeholder="Chercher un Pokémon..." autocomplete="off">
                     <div id="stats-poke1-results" class="autocomplete-results"></div>
                 </div>
                 <div class="calc-field autocomplete-field">
                     <label for="stats-poke2-input">Pokémon 2 (optionnel)</label>
-                    <input type="text" id="stats-poke2-input" class="search-input" placeholder="Chercher un Pokémon...">
+                    <input type="text" id="stats-poke2-input" class="search-input" placeholder="Chercher un Pokémon..." autocomplete="off">
                     <div id="stats-poke2-results" class="autocomplete-results"></div>
                 </div>
             </div>
             <div id="stats-types-display" class="stats-types-line"></div>
             <button id="stats-add-team-btn" class="generate-btn stats-add-btn" style="display: none;">Ajouter Pokémon 1 à "Mon Équipe"</button>
             <div class="stats-chart-wrapper">
-                <canvas id="stats-radar-chart"></canvas>
+                <canvas id="stats-radar-chart" role="img" aria-label="Radar des statistiques de base"></canvas>
             </div>
             <div id="stats-table"></div>
             <div id="abilities-section" class="moves-section"></div>
@@ -203,9 +216,9 @@
         </div>
 
         <!-- Onglet Spécificités -->
-        <div id="specificities" class="tab-content">
+        <div id="specificities" class="tab-content" role="tabpanel" aria-labelledby="tab-specificities">
             <h2>Spécificités du jeu</h2>
-            <p class="evolutions-note">⚠️ Section approximative : les méga-évolutions sont détectées automatiquement, mais les exclusivités de version se basent uniquement sur les rencontres sauvages (les légendaires/événements obtenus autrement peuvent manquer), et les formes spéciales viennent d'une petite liste connue, pas d'une détection automatique complète.</p>
+            <p class="evolutions-note">⚠️ Section approximative : les méga-évolutions sont détectées automatiquement, mais les exclusivités de version se basent uniquement sur les rencontres sauvages connues de PokéAPI (les légendaires/événements obtenus autrement peuvent manquer, et certains jeux récents n'ont pas ces données), et les formes spéciales viennent d'une petite liste connue, pas d'une détection automatique complète.</p>
 
             <h3>Méga-évolutions</h3>
             <div id="mega-list" class="pokemon-list"><p>Sélectionne l'onglet pour charger.</p></div>
@@ -217,16 +230,31 @@
             <div id="version-exclusives" class="moves-columns"></div>
         </div>
 
-        <footer class="site-footer">
-            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/65.png" alt="Alakazam">
-            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/94.png" alt="Ectoplasma">
-            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="Pikachu">
-            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/6.png" alt="Dracaufeu">
-            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/142.png" alt="Ptéra">
+        <footer class="site-footer" aria-hidden="true">
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/65.png" alt="">
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/94.png" alt="">
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="">
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/6.png" alt="">
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/142.png" alt="">
         </footer>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="script.js"></script>
+    <script src="js/dom.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/generation.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/tabs.js"></script>
+    <script src="js/game-loader.js"></script>
+    <script src="js/locations.js"></script>
+    <script src="js/pokedex.js"></script>
+    <script src="js/team.js"></script>
+    <script src="js/generator.js"></script>
+    <script src="js/calculator.js"></script>
+    <script src="js/evolutions.js"></script>
+    <script src="js/stats.js"></script>
+    <script src="js/specificities.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>

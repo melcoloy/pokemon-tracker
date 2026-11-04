@@ -675,196 +675,337 @@ header h1 {
     margin-left: 10px;
 }
 
+/* ==================== TABLEAUX DES CAPACITÉS ==================== */
+
+.moves-table-block {
+    margin-bottom: 25px;
+}
+
+.moves-table-block h4 {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.table-scroll {
+    overflow-x: auto;
+}
+
+.moves-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+}
+
+.moves-table th,
+.moves-table td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+    color: #333;
+    white-space: nowrap;
+}
+
+.moves-table th {
+    background: #f5f5f5;
+    font-weight: 600;
+}
+
+.moves-table tbody tr:hover {
+    background: #f7f8ff;
+}
+
+.moves-table .num {
+    text-align: right;
+}
+
+.moves-table .move-first {
+    color: #667eea;
+    font-weight: 600;
+}
+
+.muted {
+    color: #888;
+    font-weight: normal;
+}
+
+/* Badges de type (couleurs habituelles des types) */
+.type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    color: white;
+    font-size: 0.85em;
+    font-weight: 600;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+
+.type-normal { background: #9fa19f; }
+.type-fighting { background: #ff8000; }
+.type-flying { background: #81b9ef; }
+.type-poison { background: #9141cb; }
+.type-ground { background: #915121; }
+.type-rock { background: #afa981; }
+.type-bug { background: #91a119; }
+.type-ghost { background: #704170; }
+.type-steel { background: #60a1b8; }
+.type-fire { background: #e62829; }
+.type-water { background: #2980ef; }
+.type-grass { background: #3fa129; }
+.type-electric { background: #d9b100; }
+.type-psychic { background: #ef4179; }
+.type-ice { background: #3dcef3; }
+.type-dragon { background: #5060e1; }
+.type-dark { background: #624d4e; }
+.type-fairy { background: #ef70ef; }
+.type-stellar { background: #40b5a5; }
+
+/* ==================== ACCESSIBILITÉ ==================== */
+
+/* Contour bien visible pour la navigation au clavier */
+:focus-visible {
+    outline: 3px solid #ffb300;
+    outline-offset: 2px;
+}
+
+.pokemon-card[role="button"] {
+    cursor: pointer;
+}
+
+.autocomplete-item.active {
+    background: #e8ebff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
 /* ==================== MODE SOMBRE ==================== */
 
-body.dark-mode .container {
+html.dark-mode .moves-table-block h4 {
+    color: #eee;
+}
+
+html.dark-mode .moves-table th {
+    background: #2a2a3d;
+    color: #eee;
+}
+
+html.dark-mode .moves-table td {
+    color: #eee;
+}
+
+html.dark-mode .moves-table th,
+html.dark-mode .moves-table td {
+    border-bottom-color: #444;
+}
+
+html.dark-mode .moves-table tbody tr:hover {
+    background: #2f2f48;
+}
+
+html.dark-mode .moves-table .move-first {
+    color: #a8b4ff;
+}
+
+html.dark-mode .muted {
+    color: #999;
+}
+
+html.dark-mode .autocomplete-item.active {
+    background: #3d3d5c;
+}
+
+html.dark-mode .container {
     background: #1e1e2e;
 }
 
-body.dark-mode .game-select-wrapper {
+html.dark-mode .game-select-wrapper {
     background: #2a2a3d;
     border-bottom-color: #444;
 }
 
-body.dark-mode .game-select-wrapper label {
+html.dark-mode .game-select-wrapper label {
     color: #eee;
 }
 
-body.dark-mode .tabs {
+html.dark-mode .tabs {
     background: #24243a;
     border-bottom-color: #444;
 }
 
-body.dark-mode .tab-btn {
+html.dark-mode .tab-btn {
     background: #33334d;
     color: #eee;
 }
 
-body.dark-mode .tab-btn:hover {
+html.dark-mode .tab-btn:hover {
     background: #3d3d5c;
 }
 
-body.dark-mode .tab-content h2 {
+html.dark-mode .tab-content h2 {
     color: #eee;
 }
 
-body.dark-mode .search-input,
-body.dark-mode .type-select {
+html.dark-mode .search-input,
+html.dark-mode .type-select {
     background: #2a2a3d;
     border-color: #444;
     color: #eee;
 }
 
-body.dark-mode .pokemon-card {
+html.dark-mode .pokemon-card {
     background: #2a2a3d;
     border-color: #444;
 }
 
-body.dark-mode .pokemon-card h3 {
+html.dark-mode .pokemon-card h3 {
     color: #eee;
 }
 
-body.dark-mode .pokemon-card p {
+html.dark-mode .pokemon-card p {
     color: #aaa;
 }
 
-body.dark-mode .national-num {
+html.dark-mode .national-num {
     color: #888;
 }
 
-body.dark-mode .team-slot {
+html.dark-mode .team-slot {
     background: #2a2a3d;
     border-color: #555;
 }
 
-body.dark-mode .team-slot.filled {
+html.dark-mode .team-slot.filled {
     background: #2a2a3d;
     border-color: #667eea;
 }
 
-body.dark-mode .team-slot p.types {
+html.dark-mode .team-slot p.types {
     color: #aaa;
 }
 
-body.dark-mode .calc-intro {
+html.dark-mode .calc-intro {
     color: #aaa;
 }
 
-body.dark-mode .calc-field label {
+html.dark-mode .calc-field label {
     color: #eee;
 }
 
-body.dark-mode .stats-types-line {
+html.dark-mode .stats-types-line {
     color: #aaa;
 }
 
-body.dark-mode .calc-result.effect-none {
+html.dark-mode .calc-result.effect-none {
     background: #33334a;
     color: #ccc;
 }
 
-body.dark-mode .calc-result.effect-not-very {
+html.dark-mode .calc-result.effect-not-very {
     background: #4a1f1f;
     color: #ff9c9c;
 }
 
-body.dark-mode .calc-result.effect-normal {
+html.dark-mode .calc-result.effect-normal {
     background: #2a2a4a;
     color: #ddd;
 }
 
-body.dark-mode .calc-result.effect-super {
+html.dark-mode .calc-result.effect-super {
     background: #1f4a2f;
     color: #9cffb8;
 }
 
-body.dark-mode .evolutions-note {
+html.dark-mode .evolutions-note {
     background: #3a3320;
     border-color: #6b5a2a;
     color: #e0c060;
 }
 
-body.dark-mode #evolutions h3,
-body.dark-mode .moves-section h3 {
+html.dark-mode #evolutions h3,
+html.dark-mode .moves-section h3 {
     color: #eee;
 }
 
-body.dark-mode .evolution-card {
+html.dark-mode .evolution-card {
     background: #2a2a3d;
     border-color: #444;
 }
 
-body.dark-mode .evolution-mon span {
+html.dark-mode .evolution-mon span {
     color: #eee;
 }
 
-body.dark-mode .evolution-method {
+html.dark-mode .evolution-method {
     color: #aaa;
 }
 
-body.dark-mode .evolutions-empty {
+html.dark-mode .evolutions-empty {
     color: #aaa;
 }
 
-body.dark-mode .stats-data-table th {
+html.dark-mode .stats-data-table th {
     background: #2a2a3d;
     color: #eee;
 }
 
-body.dark-mode .stats-data-table td {
+html.dark-mode .stats-data-table td {
     color: #eee;
 }
 
-body.dark-mode .stats-data-table th,
-body.dark-mode .stats-data-table td {
+html.dark-mode .stats-data-table th,
+html.dark-mode .stats-data-table td {
     border-bottom-color: #444;
 }
 
-body.dark-mode .autocomplete-results {
+html.dark-mode .autocomplete-results {
     background: #2a2a3d;
     border-color: #444;
 }
 
-body.dark-mode .autocomplete-item {
+html.dark-mode .autocomplete-item {
     color: #eee;
 }
 
-body.dark-mode .autocomplete-item:hover {
+html.dark-mode .autocomplete-item:hover {
     background: #33334d;
 }
 
-body.dark-mode .autocomplete-item.no-result {
+html.dark-mode .autocomplete-item.no-result {
     color: #888;
 }
 
-body.dark-mode .autocomplete-item.no-result:hover {
+html.dark-mode .autocomplete-item.no-result:hover {
     background: #2a2a3d;
 }
 
-body.dark-mode .moves-column h4 {
+html.dark-mode .moves-column h4 {
     color: #eee;
 }
 
-body.dark-mode .moves-list li {
+html.dark-mode .moves-list li {
     background: #2a2a3d;
     color: #eee;
 }
 
-body.dark-mode .moves-list li.moves-empty {
+html.dark-mode .moves-list li.moves-empty {
     color: #888;
 }
 
-body.dark-mode .site-footer {
+html.dark-mode .site-footer {
     background: #24243a;
     border-top-color: #444;
 }
 
-body.dark-mode .export-btn {
+html.dark-mode .export-btn {
     background: #2a2a3d;
     color: #a8b4ff;
 }
 
-body.dark-mode .export-btn:hover {
+html.dark-mode .export-btn:hover {
     background: #667eea;
     color: white;
 }

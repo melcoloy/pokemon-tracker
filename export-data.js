@@ -7,7 +7,8 @@
 //
 // Nécessite Node 18 ou plus récent (pour le fetch natif). Vérifie avec : node -v
 //
-// Les anciennes stats et anciens talents (data/past.json) sont générés à part : node export-past-data.js
+// Ensuite, lance "node export-csv-data.js" pour générer les données complémentaires
+// (capacités, zones, conditions d'évolution, noms français, anciennes stats et anciens talents).
 
 const fs = require('fs');
 const path = require('path');
@@ -194,21 +195,8 @@ async function exportGame(versionSlug) {
             ? `${frenchNameBase} ${regionalFormSuffix(regionName)}`
             : frenchNameBase;
 
-        // Ne garde que les capacités apprenables dans CE jeu (allège fortement le fichier)
-        const trimmedMoves = pokeData.moves
-            .map(m => {
-                const detail = m.version_group_details.find(d => d.version_group.name === versionGroupName);
-                if (!detail) return null;
-                return {
-                    move: { name: m.move.name, url: m.move.url },
-                    version_group_details: [{
-                        level_learned_at: detail.level_learned_at,
-                        move_learn_method: { name: detail.move_learn_method.name },
-                        version_group: { name: versionGroupName }
-                    }]
-                };
-            })
-            .filter(Boolean);
+        // Les capacités apprises ne sont pas stockées ici : elles sont générées (avec leurs détails
+        // par génération) dans data/extra/{jeu}.json par export-csv-data.js
 
         const abilities = pokeData.abilities.map(a => ({
             name: a.ability.name,
@@ -225,7 +213,7 @@ async function exportGame(versionSlug) {
             frenchName,
             types: pokeData.types.map(t => ({ type: { name: t.type.name } })),
             frenchTypes,
-            stats: pokeData.stats,
+            stats: pokeData.stats.map(st => ({ base_stat: st.base_stat, stat: { name: st.stat.name } })),
             sprites: {
                 front_default: pokeData.sprites.front_default,
                 official_artwork: (pokeData.sprites.other && pokeData.sprites.other['official-artwork'])
@@ -235,8 +223,7 @@ async function exportGame(versionSlug) {
             isFinal,
             isLegendary,
             abilities,
-            varieties,
-            moves: trimmedMoves
+            varieties
         };
     });
 
@@ -311,7 +298,7 @@ async function main() {
         }
     }
 
-    console.log('\nTerminé !');
+    console.log('\nTerminé ! Lance maintenant "node export-csv-data.js" pour les données complémentaires.');
 }
 
 main();
