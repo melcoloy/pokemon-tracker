@@ -765,6 +765,136 @@ header h1 {
 .type-fairy { background: #ef70ef; }
 .type-stellar { background: #40b5a5; }
 
+/* ==================== ANALYSE DE L'ÉQUIPE ==================== */
+
+.team-analysis {
+    margin-top: 35px;
+}
+
+.team-analysis h3 {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.analysis-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 15px;
+    margin: 15px 0 25px;
+}
+
+.analysis-card {
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 15px;
+    background: #fafafa;
+}
+
+.analysis-card h4 {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.analysis-hint {
+    color: #555;
+    font-size: 0.92em;
+    margin-bottom: 8px;
+}
+
+.analysis-subtitle {
+    color: #333;
+    font-weight: 600;
+    font-size: 0.92em;
+    margin-bottom: 6px;
+}
+
+.analysis-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.analysis-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #333;
+    font-size: 0.92em;
+}
+
+.analysis-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.analysis-table-title {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.analysis-table {
+    border-collapse: collapse;
+    font-size: 0.92em;
+    min-width: 100%;
+}
+
+.analysis-table th,
+.analysis-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #eee;
+    color: #333;
+    white-space: nowrap;
+}
+
+.analysis-table thead th {
+    background: #f5f5f5;
+    font-weight: 600;
+    text-align: center;
+}
+
+.analysis-table thead th:first-child,
+.analysis-table tbody th {
+    text-align: left;
+}
+
+.analysis-table .num {
+    text-align: center;
+}
+
+.analysis-table td.mult {
+    text-align: center;
+    font-weight: 700;
+    min-width: 56px;
+}
+
+/* Cases colorées : le texte (×2, ×½…) porte aussi l'information, pas seulement la couleur */
+.mult-weak4 { background: #c62828; color: white !important; }
+.mult-weak { background: #ffcdd2; color: #8e1c1c !important; }
+.mult-resist { background: #c8e6c9; color: #1b5e20 !important; }
+.mult-immune { background: #37474f; color: white !important; }
+
+.count-alert {
+    color: #b71c1c !important;
+    font-weight: 700;
+}
+
+.analysis-legend {
+    margin-top: 10px;
+    font-size: 0.88em;
+}
+
+/* Masqué à l'écran mais lu par les lecteurs d'écran */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
 /* ==================== ACCESSIBILITÉ ==================== */
 
 /* Contour bien visible pour la navigation au clavier */
@@ -789,6 +919,40 @@ header h1 {
 }
 
 /* ==================== MODE SOMBRE ==================== */
+
+/* Analyse de l'équipe */
+html.dark-mode .team-analysis h3,
+html.dark-mode .analysis-card h4,
+html.dark-mode .analysis-subtitle,
+html.dark-mode .analysis-list li,
+html.dark-mode .analysis-table-title,
+html.dark-mode .analysis-table th,
+html.dark-mode .analysis-table td {
+    color: #e6e6f0;
+}
+
+html.dark-mode .analysis-card {
+    background: #2a2a3d;
+    border-color: #444;
+}
+
+html.dark-mode .analysis-hint {
+    color: #c0c0d4;
+}
+
+html.dark-mode .analysis-table thead th {
+    background: #2a2a3d;
+}
+
+html.dark-mode .analysis-table th,
+html.dark-mode .analysis-table td {
+    border-bottom-color: #444;
+}
+
+html.dark-mode .mult-weak { background: #5c1f24; color: #ffc9cc !important; }
+html.dark-mode .mult-resist { background: #1f4a2f; color: #b6f0c4 !important; }
+html.dark-mode .mult-immune { background: #101018; color: #e6e6f0 !important; }
+html.dark-mode .count-alert { color: #ff8a8a !important; }
 
 /* Texte clair par défaut : tout ce qui n'a pas de couleur propre reste lisible */
 html.dark-mode .container {

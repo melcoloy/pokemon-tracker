@@ -11,6 +11,7 @@ const pokedexList = document.getElementById('pokedex-list');
 const pokedexCount = document.getElementById('pokedex-count');
 const teamDisplay = document.getElementById('team-display');
 const teamGameLabel = document.getElementById('team-game-label');
+const teamAnalysisDisplay = document.getElementById('team-analysis');
 const generateBtn = document.getElementById('generate-btn');
 const avoidDuplicateTypes = document.getElementById('avoid-duplicate-types');
 const finalStageOnly = document.getElementById('final-stage-only');

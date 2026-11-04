@@ -77,6 +77,7 @@ function refreshCalculatorForGame() {
     });
 
     calcGenNote.textContent = `Table des types de la génération ${generation}.`;
+    renderTeamAnalysis();
     calcResult.textContent = '';
     calcResult.className = 'calc-result';
 }
