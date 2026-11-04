@@ -105,6 +105,7 @@ function updateTeamDisplay() {
     }
 
     renderEvolutionsTab();
+    renderTeamAnalysis();
 }
 
 teamDisplay.addEventListener('click', (e) => {
